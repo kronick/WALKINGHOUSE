@@ -1,7 +1,11 @@
+import java.util.Calendar.*;
+import java.util.Date.*;
+
 // Viewmode constants
 static final int MAP_VIEW = 1;
 static final int ROUTE_VIEW = 2;
 static final int DRIVE_VIEW = 3;
+static final int SUN_VIEW = 4;
 
 static final float PROCESSOR_SPEED_SCALE = 5;  //.5
 
@@ -182,91 +186,147 @@ void draw() {
     }
   }
   
-  // Draw the house
   background(80,20,100); 
   imageMode(CENTER);
   rectMode(CENTER);
   
-  pushMatrix();
-    // Transform to local view
-    translate(width/2, height/2);
-    rotate(viewRotation);
-    translate(-width/2, -height/2);
-    translate((viewCenter.x-width/2)*zoom, (viewCenter.y-height/2)*zoom);     
-    scale(zoom);
-    translate(width/2/zoom, height/2/zoom);
-    
-    // Draw the background if applicable
-    if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW) {
-      pushMatrix();
-        scale(14);
-        image(bgMap, 0,0);
-      popMatrix();    
-    }
-    
-    // Draw a red circle at the starting point
-    noFill(); stroke(red); strokeWeight(5);
-    ellipse(0,0,20,20);
-  
-    // Draw breadcrumbs
-    fill(0,0,255);
-    noStroke();
-    for(int i=0; i<house.breadcrumbs.size(); i++) {
-      XYZ p = (XYZ)house.breadcrumbs.get(i);
-      ellipse(p.x, p.y, abs((frameCount-.25*i)%80 - 40)/8 + 5, abs((frameCount-.25*i)%80 - 40)/8 + 5);
-    }
-    for(int j=0; j<colony.size(); j++) {
-      House h = (House)colony.get(j);
-      for(int i=0; i<h.breadcrumbs.size(); i++) {
-        XYZ p = (XYZ)h.breadcrumbs.get(i);
-        ellipse(p.x, p.y, abs((frameCount-.25*i)%80 - 40)/8 + 5, abs((frameCount-.25*i)%80 - 40)/8 + 5);
-      }  
-    }    
-    // Draw waypoints
-    if(viewMode == ROUTE_VIEW) {
-      for(int i=0; i<house.waypoints.size(); i++) {
-        if(i<house.waypoints.currentGoal-1)
-          stroke(0,0,150);                // Grey out path already travelled
-        else
-          stroke(0,0,255);
-        strokeWeight(3/zoom);  // Constant regardless of zoom level
-        if(i<house.waypoints.size()-1)
-          line(house.waypoints.get(i).x, house.waypoints.get(i).y, house.waypoints.get(i+1).x, house.waypoints.get(i+1).y);
-          
-        if(i==house.waypoints.currentGoal)
-          fill(green);                  // Highlight current goal
-        else if(i<house.waypoints.currentGoal)
-          fill(140,100,100);                   // Grey out old goals
-        else
-          fill(blue);
-        noStroke();
-        ellipse(house.waypoints.get(i).x, house.waypoints.get(i).y, 50, 50);
-      }  
+  if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW || viewMode == DRIVE_VIEW) {
+    // Draw the house
+    // ====================================  
+    pushMatrix();
+      // Transform to local view
+      translate(width/2, height/2);
+      rotate(viewRotation);
+      translate(-width/2, -height/2);
+      translate((viewCenter.x-width/2)*zoom, (viewCenter.y-height/2)*zoom);     
+      scale(zoom);
+      translate(width/2/zoom, height/2/zoom);
       
-    }
+      // Draw the background if applicable
+      if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW) {
+        pushMatrix();
+          scale(14);
+          image(bgMap, 0,0);
+        popMatrix();    
+      }
+      
+      // Draw a red circle at the starting point
+      noFill(); stroke(red); strokeWeight(5);
+      ellipse(0,0,20,20);
     
+      // Draw breadcrumbs
+      fill(0,0,255);
+      noStroke();
+      for(int i=0; i<house.breadcrumbs.size(); i++) {
+        XYZ p = (XYZ)house.breadcrumbs.get(i);
+        ellipse(p.x, p.y, abs((frameCount-.25*i)%80 - 40)/8 + 5, abs((frameCount-.25*i)%80 - 40)/8 + 5);
+      }
+      for(int j=0; j<colony.size(); j++) {
+        House h = (House)colony.get(j);
+        for(int i=0; i<h.breadcrumbs.size(); i++) {
+          XYZ p = (XYZ)h.breadcrumbs.get(i);
+          ellipse(p.x, p.y, abs((frameCount-.25*i)%80 - 40)/8 + 5, abs((frameCount-.25*i)%80 - 40)/8 + 5);
+        }  
+      }    
+      // Draw waypoints
+      if(viewMode == ROUTE_VIEW) {
+        for(int i=0; i<house.waypoints.size(); i++) {
+          if(i<house.waypoints.currentGoal-1)
+            stroke(0,0,150);                // Grey out path already travelled
+          else
+            stroke(0,0,255);
+          strokeWeight(3/zoom);  // Constant regardless of zoom level
+          if(i<house.waypoints.size()-1)
+            line(house.waypoints.get(i).x, house.waypoints.get(i).y, house.waypoints.get(i+1).x, house.waypoints.get(i+1).y);
+            
+          if(i==house.waypoints.currentGoal)
+            fill(green);                  // Highlight current goal
+          else if(i<house.waypoints.currentGoal)
+            fill(140,100,100);                   // Grey out old goals
+          else
+            fill(blue);
+          noStroke();
+          ellipse(house.waypoints.get(i).x, house.waypoints.get(i).y, 50, 50);
+        }  
+        
+      }
+      
+      
+      for(int j=0; j<colony.size(); j++) {
+        ((House)colony.get(j)).draw(House.TOP, 1);  
+      }
+      
+      house.draw(House.TOP, 1);
     
-    for(int j=0; j<colony.size(); j++) {
-      ((House)colony.get(j)).draw(House.TOP, 1);  
-    }
+      // Draw concentric circles around the house
+      if(debug) {
+        noFill();
+        strokeWeight(1);
+        for(int i=1; i<20; i++) {
+          stroke(0,0,255, i%2 == 0 ? 100 : 50);           
+          ellipse(house.center.x,house.center.y, 25 * i, 25 * i);
+        } 
+      }      
+    popMatrix();
     
-    house.draw(House.TOP, 1);
+    pushMatrix();
+      translate(width/2, 30);
+      if(debug) { image(house.drawDebug(), 0, 0); }  
+    popMatrix();
+  }
   
-    // Draw concentric circles around the house
-    if(debug) {
-      noFill();
-      strokeWeight(1);
-      for(int i=1; i<20; i++) {
-        stroke(0,0,255, i%2 == 0 ? 100 : 50);           
-        ellipse(house.center.x,house.center.y, 25 * i, 25 * i);
-      } 
-    }      
-  popMatrix();
-  
-  pushMatrix();
-    translate(width/2, 30);
-    if(debug) { image(house.drawDebug(), 0, 0); }  
-  popMatrix();
+  if(viewMode == SUN_VIEW) {
+    stroke(white);
+    strokeWeight(2);
+    noFill();
+    
+    pushMatrix();
+      float dialRadius = 200;
+      translate(width/2, height/2);
+      
+      // Draw polar grid
+      strokeWeight(2);
+      ellipse(0, 0, dialRadius * 2, dialRadius * 2);
+      strokeWeight(.75);
+      for(int i = 0; i<=90; i+=10) {
+        ellipse(0, 0, dialRadius * (1 - i/90.) * 2, dialRadius * (1 - i/90.) * 2);   
+      }
+      
+      // Draw NSEW lines
+      line(0, -dialRadius - 10, 0, dialRadius + 10);
+      line(-dialRadius - 10, 0, dialRadius + 10, 0);
+      
+      fill(white);
+      textFont(Courier);
+      textAlign(CENTER, CENTER);
+      text("N", 0, -dialRadius - 15);
+      text("S", 0, dialRadius + 15);
+      text("E", dialRadius + 15, 0);
+      text("W", -dialRadius - 15, 0);
+          
+      SunAngle sun = new SunAngle(42.375097,-71.105608);
+      sun.datetime.add(Calendar.DAY_OF_YEAR, frameCount);
+      for(int i=0; i<60*24; i+=20) {
+        sun.datetime.add(Calendar.MINUTE, 20);
+        //sun.datetime.set(Calendar.MONTH, Calendar.SEPTEMBER);
+        float alt = sun.getAltitude();
+        float azi = sun.getAzimuth();
+        
+        noStroke();
+        fill(alt > 0 ? red : blue);
+        float r = dialRadius - alt/(PI/2)*dialRadius;
+        ellipse(r *sin(azi), r*cos(azi), 10,10);
+        
+        ellipse(-dialRadius * 1.5, -alt/PI*2 * dialRadius, 10, 10);
+      }
+    popMatrix();
+    
+    fill(white);
+    textFont(Courier);
+    textAlign(LEFT);
+    Date t = sun.datetime.getTime();
+    text(t.toString(), 50, 50);
+  }
 
   // Draw the GUI
   GUI.draw(); 
@@ -275,7 +335,7 @@ void draw() {
   fill(white);
   textFont(Courier);
   textAlign(LEFT, CENTER);
-  text("Distance Walked: " + (house.distanceWalked/100) + " m", 10, 460);
+  text("Distance Walked: " + (new DecimalFormat("0.0")).format(house.distanceWalked/100) + " m", 10, 460);
   text("Steps Taken: " + house.stepCount, 10, 470);
   
   // Draw framerate counter and time

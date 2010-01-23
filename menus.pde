@@ -76,10 +76,17 @@ void waypointMenu() {
   GUI.clickables.add(mapButton);  
 }
 
+void sunMenu() {
+  viewMode = SUN_VIEW;
+  GUI.clearElements();
+
+  addModeIcons();  
+}
+
 void addModeIcons() {
   Button driveButton = new Button(new XY(width-40, 40), "icons/drive.svg", new Action() { void act(float x, float y) { homeMenu(); } });
   Button waypointsButton = new Button(new XY(width-40, 120), "icons/waypoints.svg", new Action() { void act(float x, float y) { waypointMenu(); } });
-  Button sunButton = new Button(new XY(width-40, 200), "icons/sun.svg", new Action() { void act(float x, float y) { house.trackSun = !house.trackSun; } });
+  Button sunButton = new Button(new XY(width-40, 200), "icons/sun.svg", new Action() { void act(float x, float y) { sunMenu(); } });
   Button viewsButton = new Button(new XY(width-40, 280), "icons/views.svg", new Action() { void act(float x, float y) { } });  
   Button statsButton = new Button(new XY(width-40, 360), "icons/stats.svg", new Action() { void act(float x, float y) { } });
   Button configButton = new Button(new XY(width-40, 440), "icons/config.svg", new Action() { void act(float x, float y) { } });
