@@ -1,22 +1,15 @@
 void homeMenu() {
-  viewMode = MAP_VIEW;
+  viewMode = DRIVE_VIEW;
+  house.navMode = House.MANUAL_NAV;
+  house.gaitState = 0;              // Stop the house moving when you go to this mode
+  follow = true;
+  zoom = 1;
   GUI.clearElements();
+  
   Button walkButton = new Button(new XY(100, 50), 200, 50, "WALK", new Action() { void act(float x, float y) { house.gaitState = 1; } });
   Button stopButton = new Button(new XY(100, 100), 200, 50, "STOP", new Action() { void act(float x, float y) { house.gaitState = 0; } });
-  Button absButton = new Button(new XY(50, 175), 100, 50, "ABS", new Action() { void act(float x, float y) { house.holdHeading = true; } });
-  Button relButton = new Button(new XY(150, 175), 100, 50, "REL", new Action() { void act(float x, float y) { house.holdHeading = false; } });
-  Button hideButton = new Button(new XY(100, 250), 200, 50, "HIDE", new Action() { void act(float x, float y) { hiddenMenu(); } });
 
-  Button leftButton = new Button(new XY(50, 375), 50, 50, "<", new Action() { void act(float x, float y) { moveViewLeft(); } });  
-  Button rightButton = new Button(new XY(150, 375), 50, 50, ">", new Action() { void act(float x, float y) { moveViewRight(); } });
-  Button centerButton = new Button(new XY(100, 375), 50, 50, "O", new Action() { void act(float x, float y) { follow = !follow; } });  
-  Button upButton = new Button(new XY(100, 325), 50, 50, "^", new Action() { void act(float x, float y) { moveViewUp(); } });  
-  Button downButton = new Button(new XY(100, 425), 50, 50, "v", new Action() { void act(float x, float y) { moveViewDown(); } });  
-  Button zoominButton = new Button(new XY(50, 325), 50, 50, "+", new Action() { void act(float x, float y) { zoom *= 1.1; } });
-  Button zoomoutButton = new Button(new XY(150, 425), 50, 50, "-", new Action() { void act(float x, float y) { zoom *= .9; } });  
-  
-  
-  Dial  headingDial = new Dial(120, 0, 360, width - 220, height/2, new DialAction() {
+  Dial  headingDial = new Dial(120, 0, 360, width/2, height/2, new DialAction() {
                                 void act(float r, float theta) {
                                   house.heading = theta;
                                   //house.translationSpeed  = r;
@@ -28,6 +21,8 @@ void homeMenu() {
                                 });
   turnRateBar.labelMin = "L";
   turnRateBar.labelMax = "R";
+  turnRateBar.goal = house.rotation;
+  headingDial.needleGoal = house.heading;
   
   VSlider speedSlider = new VSlider(40, 350, 0, 4, headingDial.center.x + headingDial.radius + 65, headingDial.center.y, new SliderAction() { void act(float value) { house.translationSpeed = value;} });
   speedSlider.name = "SPEED";
@@ -37,22 +32,14 @@ void homeMenu() {
   GUI.clickables.add(walkButton);  
   GUI.clickables.add(stopButton);
   
-  GUI.clickables.add(absButton);
-  GUI.clickables.add(relButton);
-  
-  GUI.clickables.add(hideButton);
-  
-  GUI.clickables.add(zoominButton);
-  GUI.clickables.add(zoomoutButton);
-  GUI.clickables.add(leftButton);
-  GUI.clickables.add(rightButton);
-  GUI.clickables.add(centerButton);
-  GUI.clickables.add(upButton);
-  GUI.clickables.add(downButton);
-  
   GUI.clickables.add(headingDial);
-  GUI.clickables.add(turnRateBar);
+  if(!house.trackSun) {
+    GUI.clickables.add(turnRateBar);
+  }
   GUI.clickables.add(speedSlider);
+  
+  addMapNavIcons();
+  addModeIcons();
 }
 
 void hiddenMenu() {
@@ -63,19 +50,12 @@ void hiddenMenu() {
 
 void waypointMenu() {
   viewMode = ROUTE_VIEW;
-  house.navMode = House.WAYPOINT_NAV;
+  zoom = .5;
   
   GUI.clearElements();
-  Button walkButton = new Button(new XY(100, 50), 200, 50, "WALK", new Action() { void act(float x, float y) { house.gaitState = 1; } });
+  
+  Button walkButton = new Button(new XY(100, 50), 200, 50, "WALK", new Action() { void act(float x, float y) { house.navMode = House.WAYPOINT_NAV; house.gaitState = 1; } });
   Button stopButton = new Button(new XY(100, 100), 200, 50, "STOP", new Action() { void act(float x, float y) { house.gaitState = 0; } });
-
-  Button leftButton = new Button(new XY(50, 375), 50, 50, "<", new Action() { void act(float x, float y) { moveViewLeft(); } });  
-  Button rightButton = new Button(new XY(150, 375), 50, 50, ">", new Action() { void act(float x, float y) { moveViewRight(); } });
-  Button centerButton = new Button(new XY(100, 375), 50, 50, "O", new Action() { void act(float x, float y) { follow = !follow; } });  
-  Button upButton = new Button(new XY(100, 325), 50, 50, "^", new Action() { void act(float x, float y) { moveViewUp(); } });  
-  Button downButton = new Button(new XY(100, 425), 50, 50, "v", new Action() { void act(float x, float y) { moveViewDown(); } }); 
-  Button zoominButton = new Button(new XY(50, 325), 50, 50, "+", new Action() { void act(float x, float y) { zoom *= 1.1; } });
-  Button zoomoutButton = new Button(new XY(150, 425), 50, 50, "-", new Action() { void act(float x, float y) { zoom *= .9; } });   
   
   Button mapButton = new Button(new XY(width/2, height/2), width, height, " ", new Action() { void act(float x, float y) {
     house.waypoints.add(screenToWorldCoords(x,y));
@@ -90,6 +70,40 @@ void waypointMenu() {
   GUI.clickables.add(walkButton);  
   GUI.clickables.add(stopButton);
   
+  addModeIcons();
+  addMapNavIcons();
+  
+  GUI.clickables.add(mapButton);  
+}
+
+void addModeIcons() {
+  Button driveButton = new Button(new XY(width-40, 40), "icons/drive.svg", new Action() { void act(float x, float y) { homeMenu(); } });
+  Button waypointsButton = new Button(new XY(width-40, 120), "icons/waypoints.svg", new Action() { void act(float x, float y) { waypointMenu(); } });
+  Button sunButton = new Button(new XY(width-40, 200), "icons/sun.svg", new Action() { void act(float x, float y) { house.trackSun = !house.trackSun; } });
+  Button viewsButton = new Button(new XY(width-40, 280), "icons/views.svg", new Action() { void act(float x, float y) { } });  
+  Button statsButton = new Button(new XY(width-40, 360), "icons/stats.svg", new Action() { void act(float x, float y) { } });
+  Button configButton = new Button(new XY(width-40, 440), "icons/config.svg", new Action() { void act(float x, float y) { } });
+  
+  GUI.clickables.add(driveButton);
+  GUI.clickables.add(waypointsButton);
+  GUI.clickables.add(sunButton);
+  GUI.clickables.add(viewsButton);
+  GUI.clickables.add(statsButton);
+  GUI.clickables.add(configButton);
+}
+
+void addMapNavIcons() {
+  Button leftButton = new Button(new XY(50, 390), "icons/left.svg", new Action() { void act(float x, float y) { moveViewLeft(); } });  
+  Button rightButton = new Button(new XY(130, 390), "icons/right.svg", new Action() { void act(float x, float y) { moveViewRight(); } });
+  Button centerButton = new Button(new XY(90, 390), "icons/crosshair.svg", new Action() { void act(float x, float y) { follow = !follow; } });  
+  Button upButton = new Button(new XY(90, 350), "icons/up.svg", new Action() { void act(float x, float y) { moveViewUp(); } });  
+  Button downButton = new Button(new XY(90, 430), "icons/down.svg", new Action() { void act(float x, float y) { moveViewDown(); } }); 
+  Button zoominButton = new Button(new XY(50, 350), "icons/zoomin.svg", new Action() { void act(float x, float y) { zoom *= 1.1; } });
+  Button zoomoutButton = new Button(new XY(130, 350), "icons/zoomout.svg", new Action() { void act(float x, float y) { zoom *= .9; } });     
+  
+  Button rotateCWButton = new Button(new XY(50, 430), "icons/CW.svg", new Action() { void act(float x, float y) { follow = false; viewRotation += PI/24;; } });
+  Button rotateCCWButton = new Button(new XY(130, 430), "icons/CCW.svg", new Action() { void act(float x, float y) { follow = false; viewRotation -= PI/24; } });     
+  
   GUI.clickables.add(zoominButton);
   GUI.clickables.add(zoomoutButton);
   GUI.clickables.add(leftButton);
@@ -97,6 +111,7 @@ void waypointMenu() {
   GUI.clickables.add(centerButton);
   GUI.clickables.add(upButton);
   GUI.clickables.add(downButton);
+  GUI.clickables.add(rotateCWButton);
+  GUI.clickables.add(rotateCCWButton);
 
-  GUI.clickables.add(mapButton);  
 }

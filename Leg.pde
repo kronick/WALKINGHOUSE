@@ -218,87 +218,84 @@ public class Leg {
     switch (view) {
       case House.TOP:      
         pushMatrix();
-        scale(zoom);  // Scale based on zoom factor   
-        rotate(-this.rot);
-      
-        // Circles at frame vertices
-        noFill();
-        stroke(150,70,80);
-        strokeWeight(5);
-        triangle(this.FRAME_TOP.x, this.FRAME_TOP.y, -this.FRAME_BASE / 2, 0, this.FRAME_BASE / 2, 0);
-        fill(150, 150, 255);
-        noStroke();
-        ellipse(this.FRAME_TOP.x, this.FRAME_TOP.y, 10, 10);
-        ellipse(-this.FRAME_BASE / 2, 0, 10, 10);
-        ellipse(this.FRAME_BASE / 2, 0, 10, 10);
-        ellipse(this.vertex.x, this.vertex.y, 10, 10);    
-      
-        // Foot
-        float zFactor = (House.FOOT_DOWN_LEVEL - this.foot.z)/(.5*House.FOOT_UP_LEVEL) + 1;  // Fake Z axis scaling        
-        fill(40, pushing ? 250 : 50, pushing ? 255 : 150);
-        noStroke();
-        ellipse(this.foot.x, this.foot.y, FOOT_DIAMETER * zFactor, FOOT_DIAMETER * zFactor);  
-        fill(0,pushing ? 150 : 50,255);
-        ellipse(this.foot.x, this.foot.y, 10, 10);    
+          scale(zoom);  // Scale based on zoom factor   
+          rotate(-this.rot);
         
-        // Vertical Actuator spindle
-        noFill();
-        stroke(SPINDLE_COLOR);  
-        strokeWeight(ACTUATOR_SPINDLE_THICKNESS);
-        line(this.FRAME_TOP.x, this.FRAME_TOP.y, this.foot.x, this.foot.y);
-      
-        // Vertical actuator body
-        stroke(BODY_COLOR);
-        strokeWeight(ACTUATOR_BODY_THICKNESS);
-        line(this.FRAME_TOP.x, this.FRAME_TOP.y, this.vertex.x, this.vertex.y);
-      
-        // Horizontal Actuator spindles
-        stroke(SPINDLE_COLOR);   
-        strokeWeight(ACTUATOR_SPINDLE_THICKNESS);
-        XYZ corner1 = new XYZ(-this.FRAME_BASE / 2, 0, 0);
-        XYZ corner2 = new XYZ(this.FRAME_BASE / 2, 0, 0);
-        line(corner1.x, corner1.y, this.vertex.x, this.vertex.y);
-        line(corner2.x, corner2.y, this.vertex.x, this.vertex.y);
-      
-        // Horizontal actuator bodies
-        stroke(BODY_COLOR);   
-        strokeWeight(ACTUATOR_BODY_THICKNESS);
-        XYZ temp = new XYZ(this.vertex);
-        temp.subtract(corner1);
-        temp.normalize();
-        temp.scale(this.H_ACTUATOR_MIN);
-        temp.translate(corner1);
-        line(corner1.x, corner1.y, temp.x, temp.y);
-      
-        temp = new XYZ(this.vertex);
-        temp.subtract(corner2);
-        temp.normalize();
-        temp.scale(this.H_ACTUATOR_MIN);
-        temp.translate(corner2);
-        line(corner2.x, corner2.y, temp.x, temp.y);  
-      
-        // Target position
-        pushMatrix();
-        translate(this.target.x, this.target.y);
-        stroke(0,0,255);
-        strokeWeight(1);
-        noFill();
-        line(-4, 0, 4, 0);
-        line(0, -4, 0, 4);
-        ellipse(0,0, 4, 4);
+          // Circles at frame vertices
+          noFill();
+          stroke(150,70,80);
+          strokeWeight(5);
+          triangle(this.FRAME_TOP.x, this.FRAME_TOP.y, -this.FRAME_BASE / 2, 0, this.FRAME_BASE / 2, 0);
+          fill(150, 150, 255);
+          noStroke();
+          ellipse(this.FRAME_TOP.x, this.FRAME_TOP.y, 10, 10);
+          ellipse(-this.FRAME_BASE / 2, 0, 10, 10);
+          ellipse(this.FRAME_BASE / 2, 0, 10, 10);
+          ellipse(this.vertex.x, this.vertex.y, 10, 10);    
         
-        if(debug) {
-          // DRAWING FROM TARGET = (0,0)
-          XYZ t = new XYZ(target);
-          t.rotate(this.rot);
-          t.translate(this.toCenter);
-          t.rotate(-this.rot);
-          line(0, 0, -t.x, -t.y);
-        }
-        popMatrix();
+          // Foot
+          float zFactor = (House.FOOT_DOWN_LEVEL - this.foot.z)/(.5*House.FOOT_UP_LEVEL) + 1;  // Fake Z axis scaling        
+          fill(40, pushing ? 250 : 50, pushing ? 255 : 150);
+          noStroke();
+          ellipse(this.foot.x, this.foot.y, FOOT_DIAMETER * zFactor, FOOT_DIAMETER * zFactor);  
+          fill(0,pushing ? 150 : 50,255);
+          ellipse(this.foot.x, this.foot.y, 10, 10);    
+          
+          // Vertical Actuator spindle
+          noFill();
+          stroke(SPINDLE_COLOR);  
+          strokeWeight(ACTUATOR_SPINDLE_THICKNESS);
+          line(this.FRAME_TOP.x, this.FRAME_TOP.y, this.foot.x, this.foot.y);
         
-        //new XYZ(cos(this.rot) * iCenter.x + sin(this.rot) * iCenter.y, cos(this.rot) * iCenter.y - sin(this.rot) * iCenter.x, iCenter.z);
+          // Vertical actuator body
+          stroke(BODY_COLOR);
+          strokeWeight(ACTUATOR_BODY_THICKNESS);
+          line(this.FRAME_TOP.x, this.FRAME_TOP.y, this.vertex.x, this.vertex.y);
         
+          // Horizontal Actuator spindles
+          stroke(SPINDLE_COLOR);   
+          strokeWeight(ACTUATOR_SPINDLE_THICKNESS);
+          XYZ corner1 = new XYZ(-this.FRAME_BASE / 2, 0, 0);
+          XYZ corner2 = new XYZ(this.FRAME_BASE / 2, 0, 0);
+          line(corner1.x, corner1.y, this.vertex.x, this.vertex.y);
+          line(corner2.x, corner2.y, this.vertex.x, this.vertex.y);
+        
+          // Horizontal actuator bodies
+          stroke(BODY_COLOR);   
+          strokeWeight(ACTUATOR_BODY_THICKNESS);
+          XYZ temp = new XYZ(this.vertex);
+          temp.subtract(corner1);
+          temp.normalize();
+          temp.scale(this.H_ACTUATOR_MIN);
+          temp.translate(corner1);
+          line(corner1.x, corner1.y, temp.x, temp.y);
+        
+          temp = new XYZ(this.vertex);
+          temp.subtract(corner2);
+          temp.normalize();
+          temp.scale(this.H_ACTUATOR_MIN);
+          temp.translate(corner2);
+          line(corner2.x, corner2.y, temp.x, temp.y);  
+        
+          // Target position
+          pushMatrix();
+            translate(this.target.x, this.target.y);
+            stroke(0,0,255);
+            strokeWeight(1);
+            noFill();
+            line(-4, 0, 4, 0);
+            line(0, -4, 0, 4);
+            ellipse(0,0, 4, 4);
+            
+            if(debug) {
+              // DRAWING FROM TARGET = (0,0)
+              XYZ t = new XYZ(target);
+              t.rotate(this.rot);
+              t.translate(this.toCenter);
+              t.rotate(-this.rot);
+              line(0, 0, -t.x, -t.y);
+            }
+          popMatrix();
         popMatrix();
         break;
       case House.FRONT:

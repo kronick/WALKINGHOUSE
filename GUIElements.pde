@@ -398,8 +398,8 @@ class VSlider implements Clickable
 
 class Button implements Clickable {
   public XY center;
-  public int width;
-  public int height;
+  public float width;
+  public float height;
   public color bgColor, fgColor, hoverColor, borderColor;
   public int borderWidth;
   public boolean transparent;
@@ -412,11 +412,16 @@ class Button implements Clickable {
  
   public boolean hovering;
   public boolean clicking;
- 
+  
+  public PShape icon;
+
+  Button(XY icenter, String iconpath, Action ionClick) {
+    this(icenter, 0, 0, iconpath, HelveticaBold, iconpath, ionClick);
+  } 
   Button(XY icenter, int iwidth, int iheight, String ilabel, Action ionClick) {
-    this(icenter, iwidth, iheight, ilabel, HelveticaBold, ionClick);
+    this(icenter, iwidth, iheight, ilabel, HelveticaBold, null, ionClick);
   }
-  Button(XY icenter, int iwidth, int iheight, String ilabel, PFont ifont, Action ionClick) {
+  Button(XY icenter, int iwidth, int iheight, String ilabel, PFont ifont, String iconpath, Action ionClick) {
     this.center = icenter;
     this.width =  iwidth;
     this.height = iheight;
@@ -432,6 +437,13 @@ class Button implements Clickable {
     
     this.hovering = false;
     this.clicking = false;
+    
+    if(iconpath != null) {
+      icon = loadShape(iconpath);
+      this.width = icon.width;
+      this.height = icon.height;
+    }
+    
   }   
   
   boolean inBounds(float x, float y) {
@@ -467,10 +479,17 @@ class Button implements Clickable {
     }
     
     rect(this.center.x, this.center.y, this.width, this.height);
-    textFont(this.font);
-    textAlign(CENTER, CENTER);
-    fill(this.fgColor);
-    text(this.label, this.center.x, this.center.y); 
+    
+    if(icon == null) {
+      textFont(this.font);
+      textAlign(CENTER, CENTER);
+      fill(this.fgColor);
+      text(this.label, this.center.x, this.center.y); 
+    }
+    else {
+      shapeMode(CENTER);
+      shape(icon, center.x, center.y);
+    }
   }
 }
 

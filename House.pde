@@ -25,6 +25,7 @@ class House
   public float rotation;
   public XYZ rotationCenter;
   public boolean holdHeading = false;
+  public boolean trackSun = false;
   
   public WaypointList waypoints = new WaypointList();
   public int navMode = MANUAL_NAV;
@@ -122,6 +123,9 @@ class House
     
     if(translationVector.length() == 0 && rotation == 0) gaitState = 0;  // If no movement is specified, don't try to move!
     
+    stepVector = new XYZ(translationVector);  
+    stepRotation = rotation;
+    
     switch(gaitState) {
       case 0:  // Stop everything!
         this.status = "House at rest.";
@@ -133,10 +137,7 @@ class House
         break;
       case 1:  // Move legs up/down. Repeat this state until all legs are up or down.
         this.status = "Switching legs up/down...";
-        // Copy input commands to current step parameters
-        stepVector = new XYZ(translationVector);
-        stepRotation = rotation;
-
+        // Copy input commands to current step parameter
         boolean allUp = true;
         boolean allDown = true;
         if(debug) println("Moving legs up/down...");

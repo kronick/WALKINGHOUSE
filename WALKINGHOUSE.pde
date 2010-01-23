@@ -1,7 +1,7 @@
 // Viewmode constants
 static final int MAP_VIEW = 1;
 static final int ROUTE_VIEW = 2;
-static final int HOUSE_VIEW = 3;
+static final int DRIVE_VIEW = 3;
 
 static final float PROCESSOR_SPEED_SCALE = 5;  //.5
 
@@ -42,11 +42,15 @@ PImage bgMap;
 boolean turbo = false;
 boolean follow = false;
 
+XMLElement config;
+
 void setup() {
-  size(1280,800, JAVA2D); //800x480
+  size(800,480, JAVA2D); //800x480
   smooth();
   frameRate(FRAME_RATE);
   colorMode(HSB); 
+  
+  config = new XMLElement(this, "config.xml");
   
   hint(ENABLE_NATIVE_FONTS); 
   Courier = loadFont("Courier-Bold-11.vlw");
@@ -149,7 +153,8 @@ void mouseDragged() {
 
 void draw() {
   //println(frameRate);
-  // Update things and check input
+  
+  // Update the house(s)
   for(int i=0; i<(turbo ? 10 : 1); i++) {
     house.update();
     for(int j=0; j<colony.size(); j++) {
@@ -157,18 +162,24 @@ void draw() {
     }
   }
   
+  // Move the viewport to track the house if the follow flag is set true
   if(follow) {
     viewCenter.x -= (viewCenter.x - (width/2 - house.center.x)) * .1;
     viewCenter.y -= (viewCenter.y - (height/2-house.center.y)) * .1;
     
-    float compAngle = -house.angle + PI/2;
-    float viewDiff = (viewRotation - compAngle);
-    if(viewDiff > PI) viewDiff -= 2*PI;
-    if(viewDiff < -PI) viewDiff += 2*PI;
-    println(degrees(viewDiff));
-    viewRotation -= viewDiff * .05;
-    while(viewRotation+PI/2 < 0) viewRotation += 2*PI;
-    while(viewRotation+PI/2 > 2*PI) viewRotation -= 2*PI;
+    if(!house.holdHeading) {
+      float compAngle = -house.angle + PI/2;
+      float viewDiff = (viewRotation - compAngle);
+      if(viewDiff > PI) viewDiff -= 2*PI;
+      if(viewDiff < -PI) viewDiff += 2*PI;
+      //println(degrees(viewDiff));
+      viewRotation -= viewDiff * .05;
+      while(viewRotation+PI/2 < 0) viewRotation += 2*PI;
+      while(viewRotation+PI/2 > 2*PI) viewRotation -= 2*PI;
+    }
+    else {
+      viewRotation = 0;
+    }
   }
   
   // Draw the house
@@ -177,10 +188,6 @@ void draw() {
   rectMode(CENTER);
   
   pushMatrix();
-    // Move view closer to view target
-    //zoom -= (zoom - zoomGoal) * .1;
-    //if(abs(zoom-zoomGoal) < .001) zoom = zoomGoal;
-    
     // Transform to local view
     translate(width/2, height/2);
     rotate(viewRotation);
@@ -189,11 +196,15 @@ void draw() {
     scale(zoom);
     translate(width/2/zoom, height/2/zoom);
     
-    pushMatrix();
-      scale(10);
-      //image(bgMap, 0,0);
-    popMatrix();    
+    // Draw the background if applicable
+    if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW) {
+      pushMatrix();
+        scale(14);
+        image(bgMap, 0,0);
+      popMatrix();    
+    }
     
+    // Draw a red circle at the starting point
     noFill(); stroke(red); strokeWeight(5);
     ellipse(0,0,20,20);
   
@@ -238,6 +249,7 @@ void draw() {
     for(int j=0; j<colony.size(); j++) {
       ((House)colony.get(j)).draw(House.TOP, 1);  
     }
+    
     house.draw(House.TOP, 1);
   
     // Draw concentric circles around the house
@@ -255,23 +267,19 @@ void draw() {
     translate(width/2, 30);
     if(debug) { image(house.drawDebug(), 0, 0); }  
   popMatrix();
+
+  // Draw the GUI
+  GUI.draw(); 
   
-  pushMatrix();
-    translate(width/2, height-20);
-    textAlign(CENTER, CENTER);
-    textFont(Courier);
-    fill(0,0,255);
-    //text(house.status, 0,0);
-  popMatrix();
-  
+  // Draw basic statistics
+  fill(white);
+  textFont(Courier);
   textAlign(LEFT, CENTER);
   text("Distance Walked: " + (house.distanceWalked/100) + " m", 10, 460);
   text("Steps Taken: " + house.stepCount, 10, 470);
   
-  // Draw framerate counter
+  // Draw framerate counter and time
   textAlign(RIGHT,CENTER);
-  text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-10, height-10);
-  
-  // Draw the GUI
-  GUI.draw();
+  text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
+  text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
 }
