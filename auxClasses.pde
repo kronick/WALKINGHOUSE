@@ -213,6 +213,7 @@ public class SunAngle {
     // First, get the corresponding time in the GMT timezone
     Calendar gmt = (Calendar)cal.clone();
     gmt.add(Calendar.MILLISECOND, -cal.get(Calendar.ZONE_OFFSET));  // By subtracting the timezone offset
+    gmt.add(Calendar.MILLISECOND, -cal.get(Calendar.DST_OFFSET));  // and subtracting any daylight savings offset
     
     float gmtSolarHour = gmt.get(Calendar.HOUR_OF_DAY) + gmt.get(Calendar.MINUTE)/60. + gmt.get(Calendar.SECOND)/3600. - 12;
     float longitudeOffset = longitude / 180 * 12;  // 180 degrees would be the other side of the world and therefore 12 hours off

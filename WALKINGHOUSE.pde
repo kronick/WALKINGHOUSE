@@ -54,8 +54,6 @@ void setup() {
   frameRate(FRAME_RATE);
   colorMode(HSB); 
   
-  config = new XMLElement(this, "config.xml");
-  
   hint(ENABLE_NATIVE_FONTS); 
   Courier = loadFont("Courier-Bold-11.vlw");
   HelveticaBold = loadFont("Helvetica-Bold-40.vlw");
@@ -77,8 +75,6 @@ void setup() {
   bgMap = loadImage("map.png");
   
   mWheel = new ScrollEvent();
-  
-  //deviance = new ArcBar(60, 20, -PI, 0, -10, 10, width/4, height/2);
   
   zeroDist = 0;
   
@@ -281,7 +277,7 @@ void draw() {
     noFill();
     
     pushMatrix();
-      float dialRadius = 200;
+      float dialRadius = 150;
       translate(width/2, height/2);
       
       // Draw polar grid
@@ -304,10 +300,13 @@ void draw() {
       text("E", dialRadius + 15, 0);
       text("W", -dialRadius - 15, 0);
           
-      SunAngle sun = new SunAngle(42.375097,-71.105608);
+      SunAngle sun = new SunAngle(-float(mouseY)/height*180+90,90-float(mouseX)/width*15);  // 42.375097,-71.105608 is cambridge, ma
       sun.datetime.add(Calendar.DAY_OF_YEAR, frameCount);
-      for(int i=0; i<60*24; i+=20) {
-        sun.datetime.add(Calendar.MINUTE, 20);
+      sun.datetime.set(Calendar.MINUTE, 0);
+      
+    
+      for(int i=0; i<60*24; i+=30) {
+        sun.datetime.add(Calendar.MINUTE, 30);
         //sun.datetime.set(Calendar.MONTH, Calendar.SEPTEMBER);
         float alt = sun.getAltitude();
         float azi = sun.getAzimuth();
@@ -315,9 +314,20 @@ void draw() {
         noStroke();
         fill(alt > 0 ? red : blue);
         float r = dialRadius - alt/(PI/2)*dialRadius;
-        ellipse(r *sin(azi), r*cos(azi), 10,10);
         
-        ellipse(-dialRadius * 1.5, -alt/PI*2 * dialRadius, 10, 10);
+        ellipse(r *sin(azi), r*cos(azi), 15,15);
+        
+        ellipse(-dialRadius * 1.5, -alt/PI*2 * dialRadius, 15, 15);
+        
+        //ellipse(azi/(2*PI) * width, -alt/PI*2 * dialRadius, 15, 15);
+        
+        if(i%60 == 0) {
+          fill(white);
+          textFont(Courier);
+          textAlign(CENTER,CENTER);
+          text(sun.datetime.get(Calendar.HOUR_OF_DAY), r *sin(azi), r*cos(azi));
+        }
+        
       }
     popMatrix();
     
