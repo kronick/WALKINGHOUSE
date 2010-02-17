@@ -1,9 +1,11 @@
 #include <Servo.h> 
 #include <Charlieplex.h>
+#include <EEPROM.h>
 
-#define CHARLIE_PINS 3
+#define SAVE_EVERY 1000  // Save to EEPROM ever n cycles
+
 byte charliePins[] = {8, 12, 13};
-Charlieplex charlieplex = Charlieplex(charliePins,CHARLIE_PINS);
+Charlieplex charlieplex = Charlieplex(charliePins,3);
 //individual 'pins' , adress charlieplex pins as you would adress an array
 charliePin led5 = { 1 , 2 }; //led1 is indicated by current flow from 12 to 13
 charliePin led2 = { 2 , 1 };
@@ -63,8 +65,11 @@ char buffer[32];  // For building strings
 #define SPICLOCK  2//sck 
 
 // Slave Selects
-byte SS[6] = {14, 15, 16, 17, 18, 19};
+//byte SS[6] = {14, 15, 16, 17, 18, 19};
+byte SS[6] = {19, 18, 17, 16, 15, 14};
            // LF  LB  LV  RF  RB  RV
+           
+byte outputPins[6] = {10, 11, 6, 9, 3, 5};
            
 //LS7366R Quadrature counter OP-Codes 
 #define CLEAR_COUNTER 8 // Set CNTR to 0
@@ -87,13 +92,17 @@ int target[6];
 
 void setup() 
 { 
+  for(int i=0; i<6; i++) {
+    PWMout[i].attach(outputPins[i]);  
+  }
+  /*
   PWMout[0].attach(3);
   PWMout[1].attach(5);
   PWMout[2].attach(6);
   PWMout[3].attach(9);
   PWMout[4].attach(10);
   PWMout[5].attach(11);
-  
+  */
  
   
   Serial.begin(9600);
@@ -136,9 +145,12 @@ void setup()
     delay(10);    
     
     
-    digitalWrite(SS[i],LOW);
-    spi_transfer(B00100000);  // Set counter to zero
-    digitalWrite(SS[i], HIGH);
+    // Read stored value from EEPROM and set counter
+    int stored = int(EEPROM.read(2*i+1)) | (int(EEPROM.read(2*i)) << 8);
+    if(stored == 65535) // This is the default value and obviously invalid, set to 0
+      stored = 0;
+    //set_count(i, stored);
+      
     delay(10);             
 
     digitalWrite(SS[i],LOW);
@@ -251,6 +263,9 @@ int read_STR(int counter) {
 
 void set_PWM(int actuator, int value) {
   // Value ranges from -500 to 500
+  if(value > 500) value = 500;
+  if(value < -500) value = -500;
+  if(actuator % 2 > 0) value *= -1;  // Flip every other channel
   PWMout[actuator].writeMicroseconds(1500 + value);
 }
 
@@ -309,12 +324,15 @@ void loop()
           // NOTE: Calibration halts the control loop
           int last = get_count(c_actuator);
           int n = DEADTIME;
-          while(n > 0) {
-            set_PWM(c_actuator, 500);  // Move inward
+          int timeout = 2000;
+          while(n > 0 && timeout > 0) {
+            set_PWM(c_actuator, -500);  // Move inward
             if(get_count(c_actuator) == last)
               n--;           // Count down if no movement
-            else
+            else {
               n = DEADTIME;  // Reset if actuator moved
+              timeout--;
+            }
             
             last = get_count(c_actuator);
             
@@ -351,12 +369,27 @@ void loop()
   if(indicatorDecay > 0) indicatorDecay--;
   else charlieplex.clear();
   
+  cycle++;
+  
   for(int i=0; i<6; i++) {
     counter[i] = get_count(i);
   
     // Calculate offset and set PWM accordingly
-    int error = map(counter[i]- target[i], -10, 10, -500, 500);
+    int error = target[i] - counter[i];
+    if(error < -15) error = -15;
+    if(error > 15) error = 15;
+    error = map(error, -15, 15, -500, 500);
     set_PWM(i, error);
+    
+    
+    // Write position to EEPROM every n cycles if it's different
+    // MSB first
+    if(cycle % SAVE_EVERY == 0) {
+      if(EEPROM.read(2*i) != counter[i] >> 8)
+        EEPROM.write(2*i, counter[i] >> 8);
+      if(EEPROM.read(2*i+1) != counter[i] & B11111111)
+        EEPROM.write(2*i+1, counter[i] & B11111111);
+    }
   }
   
   /*
