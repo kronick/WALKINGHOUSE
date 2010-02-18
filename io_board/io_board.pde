@@ -163,6 +163,15 @@ void setup()
     //Serial.println((int)spi_transfer(READ_STATUS));
     //digitalWrite(SS[i],HIGH);
   }
+  
+  for(int i=0; i<10; i++) {
+    charlieplex.charlieWrite(pins[0], HIGH);
+    delay(100);
+    charlieplex.clear();
+    delay(100);
+  }
+ 
+  
   Serial.print("Encoders configured.");
   delay(10);
 } 
@@ -290,6 +299,7 @@ void loop()
           break;
         default:  // If the command is anything else, essentially ignore it
           c_type = NONCOM;
+          while(Serial.available() > 0) { Serial.read(); }
       }
     }
     // If no actuator has been specified yet AND next char is an ASCII number 0-5
@@ -303,13 +313,16 @@ void loop()
       else c_value += incoming - 48;   // Add this number to the ones' place
     }
     // Anything else (including a stop char) will cause the command to try to run and then reset
-    else {
+    else if(incoming == '*') {
       // Run the command
       if(c_neg) c_value *= -1;  // Make value negative if the flag is set
       switch(c_type) {
-        case MOVCOM:
+        case MOVCOM: 
           target[c_actuator] = c_value;  // Set a new target
-          Serial.print("*M!");            // Acknowledge receipt         
+          Serial.print("*M");            // Acknowledge receipt         
+          Serial.print(c_actuator);
+          Serial.print(c_value);
+          Serial.print("!");
           break;
         case SETCOM:
           set_count(c_actuator, c_value);
@@ -351,9 +364,9 @@ void loop()
           Serial.print("*C!");  // Acknowledge this is complete
           break;
       }
-      
+
       // Blink the indicator pin
-      if(c_actuator >= 0 && c_actuator <= 5) {
+      if(c_actuator >= 0 && c_actuator <= 5 && c_type == MOVCOM) {
         charlieplex.charlieWrite(pins[c_actuator], HIGH);
         indicatorDecay = 50; 
       }
@@ -363,6 +376,9 @@ void loop()
       c_actuator = -1;  
       c_value = 0;
       c_neg = false;
+    }
+    else {
+      Serial.print("*MBULLSHIT!");
     }
   }
   

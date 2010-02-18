@@ -1,6 +1,8 @@
 import java.util.Calendar.*;
 import java.util.Date.*;
 
+import processing.serial.*;
+
 // Viewmode constants
 static final int MAP_VIEW = 1;
 static final int ROUTE_VIEW = 2;

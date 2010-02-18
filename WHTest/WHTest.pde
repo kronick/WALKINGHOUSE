@@ -172,6 +172,9 @@ void serialEvent(Serial p) {
     value = Integer.parseInt(inString.substring(2, inString.length()-1));
     positions[controller*6 + actuator] = value;
   }
+  else if(command == 'M') {
+   println("received: " + inString); 
+  }
 }
 
 boolean calibrate(int controller, int actuator) {
