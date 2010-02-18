@@ -87,6 +87,8 @@ Servo PWMout[6];
 // Counters
 int counter[6];
 int target[6];
+int maybenoise[6];
+
 
 #define DEADTIME 10 // Must detect no movement for this many cycles for actuator to be considered stopped
 
@@ -318,11 +320,24 @@ void loop()
       if(c_neg) c_value *= -1;  // Make value negative if the flag is set
       switch(c_type) {
         case MOVCOM: 
-          target[c_actuator] = c_value;  // Set a new target
-          Serial.print("*M");            // Acknowledge receipt         
-          Serial.print(c_actuator);
-          Serial.print(c_value);
-          Serial.print("!");
+          if(abs(c_value - target[c_actuator]) > 00) {
+            // If this is a big change, wait for a second signal to ensure it's not just noise
+            if(maybenoise[c_actuator] == c_value) {
+              // This value was already stored and can be assumed to NOT be noise so update target
+              target[c_actuator] = c_value;
+            }
+            // Don't do anything if this value doesn't match the noisy check value
+          }
+          else {
+            target[c_actuator] = c_value;  // Set a new target
+            Serial.print("*M");            // Acknowledge receipt         
+            Serial.print(c_actuator);
+            Serial.print(c_value);
+            Serial.print("!");
+          }
+          
+          maybenoise[c_actuator] = c_value;
+
           break;
         case SETCOM:
           set_count(c_actuator, c_value);
@@ -392,9 +407,7 @@ void loop()
   
     // Calculate offset and set PWM accordingly
     int error = target[i] - counter[i];
-    if(error < -15) error = -15;
-    if(error > 15) error = 15;
-    error = map(error, -15, 15, -500, 500);
+    error = map(error, -100, 100, -500, 500);
     set_PWM(i, error);
     
     

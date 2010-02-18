@@ -4,8 +4,8 @@ class House
   static final int TOP = 0;
   static final int FRONT = 1;
   static final int SIDE = 2;
-  static final float FOOT_DOWN_LEVEL = 50 * MODULE_LENGTH/124;    // Height to walk above ground.
-  static final float FOOT_UP_LEVEL = 46 * MODULE_LENGTH/124;      // 55- 46  
+  static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
+  static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46  
   
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
@@ -46,8 +46,8 @@ class House
   public float distanceWalked = 0;
   public ArrayList breadcrumbs;
   
-  static final float VERTICAL_EPSILON = .125 * PROCESSOR_SPEED_SCALE;    // .024
-  static final float HORIZONTAL_EPSILON = .125 * PROCESSOR_SPEED_SCALE; // .125
+  static final float VERTICAL_EPSILON = .024 * PROCESSOR_SPEED_SCALE;    // .024
+  static final float HORIZONTAL_EPSILON = .05 * PROCESSOR_SPEED_SCALE; // .125
   
   public String status = "";
   
@@ -135,7 +135,7 @@ class House
         this.status = "House at rest.";
         for(int i=0; i<this.modules.length; i++) {
           for(int j=0; j<this.modules[i].legs.length; j++) {
-            modules[i].legs[j].setTarget(modules[i].legs[j].target);
+            //modules[i].legs[j].setTarget(modules[i].legs[j].target);
           }
         }      
         break;
@@ -151,7 +151,7 @@ class House
               if(modules[i].legs[j].foot.z < FOOT_DOWN_LEVEL) {  // Down (ground) is in the +z direction
                 if(modules[i].legs[j].target.z <= FOOT_DOWN_LEVEL+1) {
                   if(!modules[i].legs[j].moveTarget(new XYZ(0,0,VERTICAL_EPSILON))) {
-                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_DOWN_LEVEL+1), false);
+                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_DOWN_LEVEL+1), true);
                   }
                 }
                 allDown = false;
@@ -161,9 +161,9 @@ class House
               // Reset center of rotation
               modules[i].legs[j].toCenter = new XYZ(modules[i].legs[j].offset);              
               if(modules[i].legs[j].foot.z > FOOT_UP_LEVEL) {  // Up is in the -z direction
-                if(modules[i].legs[j].target.z >= FOOT_UP_LEVEL-1) {
+                if(modules[i].legs[j].target.z >= FOOT_UP_LEVEL-3) {
                   if(!modules[i].legs[j].moveTarget(new XYZ(0,0,-VERTICAL_EPSILON))) {
-                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_UP_LEVEL-1), false);
+                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_UP_LEVEL-3), true);
                   }
                 }
                 allUp = false;
@@ -171,6 +171,7 @@ class House
             }          
           }
         }
+        println(allUp +  " "  + allDown);
         if(allUp && allDown) {
           // Set new targets for legs that are up
           for(int i=0; i<this.modules.length; i++) {
@@ -178,7 +179,7 @@ class House
               int sign = j==1 ? 1 : -1;          
               if(!isPushingLeg(i, j, gaitPhase)){
                 // Begin with target in the center of the leg's range of motion
-                modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL));
+                modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL-3));
                 //modules[i].legs[j].jumpTarget(new XYZ(-this.stepVector.x, -this.stepVector.y, this.stepVector.z),
                 //                              stepRotation * -1,
                 //                              new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL));
@@ -267,7 +268,9 @@ class House
         
     for(int i=0; i<this.modules.length; i++) {
       for(int j=0; j<this.modules[i].legs.length; j++) {
-        modules[i].legs[j].update(this.simulate);    
+        boolean sim = true;
+        if(i == 0 && j == 0) sim = false;
+        modules[i].legs[j].update(sim);    
       }
     }
     

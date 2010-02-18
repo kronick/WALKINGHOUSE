@@ -167,25 +167,35 @@ void mouseDragged() {
 void draw() {
   //println(frameRate);
 
+  updatePositions();
+  
   // Update the house(s)
-  for(int i=0; i<(turbo ? 10 : 1); i++) {
+  for(int t=0; t<(turbo ? 3 : 1); t++) {
     house.update();
     for(int j=0; j<colony.size(); j++) {
       ((House)colony.get(j)).update();  
     }
+    // Send new targets to leg controllers
+    for(int i=0; i<house.modules.length; i++) {
+        String out = "";
+        out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
+        out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
+        out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
+        out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
+        out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
+        out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
+        
+        // Send values twice for error-checking purposes
+        out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
+        out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
+        out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
+        out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
+        out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
+        out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";      
+        controllers[i].write(out);
+    }    
   }
-  
-  // Send new targets to leg controllers
-  for(int i=0; i<house.modules.length; i++) {
-      String out = "";
-      out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
-      out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
-      out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
-      out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
-      out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
-      out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
-      controllers[i].write(out);
-  }
+ 
 
   // Move the viewport to track the house if the follow flag is set true
   if(follow) {

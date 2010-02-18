@@ -132,12 +132,12 @@ void calibrateMenu(int mode) {
      
      if(configLegi > -1) {
        if(mode == SINGLE_ACT) {
-         Button frontOutButton = new Button(new XY(width/2 - 20, 80), "icons/up.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].frontAct.setPos(house.modules[configLegi].legs[configLegj].frontAct.length + 2); } });  
-         Button frontInButton =  new Button(new XY(width/2 + 20, 80), "icons/down.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].frontAct.setPos(house.modules[configLegi].legs[configLegj].frontAct.length - 2); } });      
-         Button backOutButton =  new Button(new XY(width/2 - 20, 140), "icons/up.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].backAct.setPos(house.modules[configLegi].legs[configLegj].backAct.length + 2); } });  
-         Button backInButton =   new Button(new XY(width/2 + 20, 140), "icons/down.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].backAct.setPos(house.modules[configLegi].legs[configLegj].backAct.length - 2); } });      
-         Button topOutButton =   new Button(new XY(width/2 - 20, 200), "icons/up.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].vertAct.setPos(house.modules[configLegi].legs[configLegj].vertAct.length + 2); } });  
-         Button topInButton =    new Button(new XY(width/2 + 20, 200), "icons/down.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].vertAct.setPos(house.modules[configLegi].legs[configLegj].vertAct.length - 2); } });      
+         Button frontOutButton = new Button(new XY(width/2 - 20, 80), "icons/up.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].frontAct.setPos(house.modules[configLegi].legs[configLegj].frontAct.length + 5); } });  
+         Button frontInButton =  new Button(new XY(width/2 + 20, 80), "icons/down.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].frontAct.setPos(house.modules[configLegi].legs[configLegj].frontAct.length - 5); } });      
+         Button backOutButton =  new Button(new XY(width/2 - 20, 140), "icons/up.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].backAct.setPos(house.modules[configLegi].legs[configLegj].backAct.length + 5); } });  
+         Button backInButton =   new Button(new XY(width/2 + 20, 140), "icons/down.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].backAct.setPos(house.modules[configLegi].legs[configLegj].backAct.length - 5); } });      
+         Button topOutButton =   new Button(new XY(width/2 - 20, 200), "icons/up.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].vertAct.setPos(house.modules[configLegi].legs[configLegj].vertAct.length + 5); } });  
+         Button topInButton =    new Button(new XY(width/2 + 20, 200), "icons/down.svg", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].vertAct.setPos(house.modules[configLegi].legs[configLegj].vertAct.length - 5); } });      
          
          GUI.clickables.add(frontOutButton);
          GUI.clickables.add(frontInButton);

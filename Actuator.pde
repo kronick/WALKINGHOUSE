@@ -50,16 +50,16 @@ public class Actuator {
   
   void updateLength(int count) {
     // This method gets called upon receipt of serial data with a position update
-    this.length = count * this.counterFactor;
+    this.length = this.minLength + count * this.counterFactor;
   }
   int getTargetCount() {
-    return int(this.goalLength / this.counterFactor);  
+    return int((this.goalLength-this.minLength) / this.counterFactor);  
   }
   
   boolean possible(float goal) {
     if(goal > this.minLength && goal < this.maxLength)
       return true;
-    else
+    else 
       return false;
   }      
   
