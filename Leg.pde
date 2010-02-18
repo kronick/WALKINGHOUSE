@@ -42,9 +42,9 @@ public class Leg {
   
   
   Leg(XYZ iCenter, float irot) {
-    this.frontAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED);
-    this.backAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED);
-    this.vertAct = new Actuator(V_ACTUATOR_MAX, V_ACTUATOR_MIN, V_ACTUATOR_SPEED);
+    this.frontAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .04);
+    this.backAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .04);
+    this.vertAct = new Actuator(V_ACTUATOR_MAX, V_ACTUATOR_MIN, V_ACTUATOR_SPEED, .01);
     
     this.rot = irot;
     this.offset = new XYZ(iCenter);
@@ -60,7 +60,7 @@ public class Leg {
     BODY_COLOR = color(0,0,150);    
   }
   
-  void update() {
+  void update(boolean simulate) {
     /*if(oscillate) {
       this.frontAct.setPos((cos(radians(frameCount%360))+1)/2 * (this.frontAct.maxLength - this.frontAct.minLength) + this.frontAct.minLength);
       this.backAct.setPos((sin(radians(frameCount%360))+1)/2 * (this.backAct.maxLength - this.backAct.minLength) + this.backAct.minLength);
@@ -73,10 +73,13 @@ public class Leg {
       this.backAct.setPos(newPos[1]);
       this.vertAct.setPos(newPos[2]);
     }
-    
-    this.frontAct.updatePos();  
-    this.backAct.updatePos();
-    this.vertAct.updatePos();
+   
+    if(simulate) {
+      // Invoke methods to simulate leg movement only if simulation is true
+      this.frontAct.updatePos();  
+      this.backAct.updatePos();
+      this.vertAct.updatePos();
+    }
     this.vertex = this.findVertex(this.frontAct.length, this.backAct.length);
     this.foot = this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length);    
   }

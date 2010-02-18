@@ -51,7 +51,9 @@ class House
   
   public String status = "";
   
-  House(XYZ icenter, float iangle, int imodules) {
+  boolean simulate;
+  
+  House(XYZ icenter, float iangle, int imodules, boolean simulate) {
     this.center = new XYZ(icenter.x, icenter.y, icenter.z);  
     
     // Populate with modules
@@ -69,6 +71,8 @@ class House
     this.translationSpeed = 1;
     this.rotation = 0;
     this.rotationCenter = new XYZ(0,0,0);
+    
+    this.simulate = simulate;
     
     this.heading = 0;
     
@@ -263,7 +267,7 @@ class House
         
     for(int i=0; i<this.modules.length; i++) {
       for(int j=0; j<this.modules[i].legs.length; j++) {
-        modules[i].legs[j].update();    
+        modules[i].legs[j].update(this.simulate);    
       }
     }
     

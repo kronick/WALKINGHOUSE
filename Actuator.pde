@@ -15,10 +15,14 @@ public class Actuator {
   private float drift; 
   private float noise;
   
-  Actuator(float imaxLength, float iminLength, float imaxSpeed) {
+  public float counterFactor;
+  
+  Actuator(float imaxLength, float iminLength, float imaxSpeed, float counterFactor){
     this.maxLength = imaxLength;
     this.minLength = iminLength;
     this.maxSpeed = imaxSpeed;
+    this.counterFactor = counterFactor;
+    
     this.length = (this.maxLength - this.minLength) / 2 + this.minLength;  // Default to half-extended
     //this.length = this.minLength;
     this.goalLength = this.length;
@@ -44,6 +48,14 @@ public class Actuator {
     }
   }
   
+  void updateLength(int count) {
+    // This method gets called upon receipt of serial data with a position update
+    this.length = count * this.counterFactor;
+  }
+  int getTargetCount() {
+    return int(this.goalLength / this.counterFactor);  
+  }
+  
   boolean possible(float goal) {
     if(goal > this.minLength && goal < this.maxLength)
       return true;
@@ -59,12 +71,16 @@ public class Actuator {
   }
   
   void updatePos() {
+    // This should be done asynchronously when new serial data is received
+    // What's below just provides simulated data and is run only if the parent leg/house is being simulated
+    
     this.length += this.drift;
     this.power = control.update(this.length, this.goalLength);
     if(abs(this.power) > this.maxSpeed)
       this.power = (this.power < 0 ? -1 : 1) * this.maxSpeed;
     this.power *= (1-random(0,this.noise));
     this.length += this.power;
+    
   }
   
   PGraphics draw(float xscale, float yscale) {
