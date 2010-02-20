@@ -4,7 +4,10 @@ void updatePositions() {
     for(int j=0; j<6; j++) {
       out = out + "G" + j + "*";
     }
-    controllers[i].write(out);
+    try {
+      controllers[i].write(out);
+    }
+    catch (Exception e) { };
   }  
 }
 

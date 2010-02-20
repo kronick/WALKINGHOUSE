@@ -5,7 +5,9 @@ class House
   static final int FRONT = 1;
   static final int SIDE = 2;
   static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
-  static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46  
+  static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
+  public float footUpLevel = 55;
+  public float footDownLevel = 35;
   
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
@@ -46,12 +48,15 @@ class House
   public float distanceWalked = 0;
   public ArrayList breadcrumbs;
   
-  static final float VERTICAL_EPSILON = .024 * PROCESSOR_SPEED_SCALE;    // .024
-  static final float HORIZONTAL_EPSILON = .05 * PROCESSOR_SPEED_SCALE; // .125
+  static final float VERTICAL_EPSILON = .1;    // .024
+  static final float HORIZONTAL_EPSILON = .25; // .125
+  static final float ANGULAR_EPSILON = .005;
+  
   
   public String status = "";
   
   boolean simulate;
+  boolean calibrate;
   
   House(XYZ icenter, float iangle, int imodules, boolean simulate) {
     this.center = new XYZ(icenter.x, icenter.y, icenter.z);  
@@ -60,7 +65,7 @@ class House
     this.modules = new Module[imodules];
     float o = (this.modules.length / 2.) - .5;
     for(int i=0; i<imodules; i++) {
-      modules[i] = new Module(new XYZ((i-o) * MODULE_LENGTH, 0, 0));
+      modules[i] = new Module(new XYZ((i-o) * MODULE_LENGTH, 0, 0), simulate);
     }     
     
     // Initialize the walking gait
@@ -73,6 +78,7 @@ class House
     this.rotationCenter = new XYZ(0,0,0);
     
     this.simulate = simulate;
+    this.calibrate = false;
     
     this.heading = 0;
     
@@ -128,7 +134,7 @@ class House
     if(translationVector.length() == 0 && rotation == 0) gaitState = 0;  // If no movement is specified, don't try to move!
     
     stepVector = new XYZ(translationVector);  
-    stepRotation = rotation;
+    stepRotation = rotation * frameRateFactor();
     
     switch(gaitState) {
       case 0:  // Stop everything!
@@ -150,7 +156,9 @@ class House
             if(isPushingLeg(i, j, gaitPhase)){              
               if(modules[i].legs[j].foot.z < FOOT_DOWN_LEVEL) {  // Down (ground) is in the +z direction
                 if(modules[i].legs[j].target.z <= FOOT_DOWN_LEVEL+1) {
-                  if(!modules[i].legs[j].moveTarget(new XYZ(0,0,VERTICAL_EPSILON))) {
+                  XYZ move = new XYZ(0,0,VERTICAL_EPSILON);
+                  move.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+                  if(!modules[i].legs[j].moveTarget(move)) {
                     modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_DOWN_LEVEL+1), true);
                   }
                 }
@@ -162,7 +170,9 @@ class House
               modules[i].legs[j].toCenter = new XYZ(modules[i].legs[j].offset);              
               if(modules[i].legs[j].foot.z > FOOT_UP_LEVEL) {  // Up is in the -z direction
                 if(modules[i].legs[j].target.z >= FOOT_UP_LEVEL-3) {
-                  if(!modules[i].legs[j].moveTarget(new XYZ(0,0,-VERTICAL_EPSILON))) {
+                  XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
+                  move.scale(frameRateFactor());
+                  if(!modules[i].legs[j].moveTarget(move)) {
                     modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_UP_LEVEL-3), true);
                   }
                 }
@@ -171,7 +181,6 @@ class House
             }          
           }
         }
-        println(allUp +  " "  + allDown);
         if(allUp && allDown) {
           // Set new targets for legs that are up
           for(int i=0; i<this.modules.length; i++) {
@@ -180,9 +189,6 @@ class House
               if(!isPushingLeg(i, j, gaitPhase)){
                 // Begin with target in the center of the leg's range of motion
                 modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL-3));
-                //modules[i].legs[j].jumpTarget(new XYZ(-this.stepVector.x, -this.stepVector.y, this.stepVector.z),
-                //                              stepRotation * -1,
-                //                              new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL));
               }          
             }
           }
@@ -212,13 +218,14 @@ class House
               orig.rotate(modules[i].legs[j].rot);
               orig.translate(modules[i].legs[j].toCenter); // Vector from center of house to the test point
               angular = new XYZ(orig);
-              angular.rotate(stepRotation * .015);    // Rotate that vector
+              angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
               angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
               
               delta.translate(angular);              
               float factor = delta.length();
               //delta.normalize();
               delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
+              delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
               
               if(stop && isPushingLeg(i, j, gaitPhase))
                 delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
@@ -239,7 +246,7 @@ class House
                    linChange.scale(1./this.modules.length);
                    
                    this.translated.translate(linChange);
-                   this.rotated += factor * stepRotation * .015 / this.modules.length;
+                   this.rotated += factor * stepRotation * ANGULAR_EPSILON / this.modules.length;
                  }
               }
               else {
@@ -268,9 +275,7 @@ class House
         
     for(int i=0; i<this.modules.length; i++) {
       for(int j=0; j<this.modules[i].legs.length; j++) {
-        boolean sim = true;
-        if(i == 0 && j == 0) sim = false;
-        modules[i].legs[j].update(sim);    
+        modules[i].legs[j].update();    
       }
     }
     
@@ -285,6 +290,16 @@ class House
     distanceWalked += this.translated.length();
     
     if(gaitState == 3) breadcrumbs.add(new XYZ(this.center.x, this.center.y, this.center.z));
+  }
+  
+  void updateLegsOnly() {
+    for(int i=0; i<this.modules.length; i++) {
+      for(int j=0; j<this.modules[i].legs.length; j++) {
+        boolean sim = true;
+        if(i == 0 && j == 0) sim = false;
+        modules[i].legs[j].update();    
+      }
+    }  
   }
   
   XYZ getTranslation() {
