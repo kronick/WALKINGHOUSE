@@ -9,7 +9,6 @@ class House
   static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
   public float footDownLevel = 55;
   public float footUpLevel = 35;
-
   
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
