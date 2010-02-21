@@ -3,13 +3,15 @@ import java.util.Date.*;
 
 import processing.serial.*;
 
+float BASE_FRAMERATE = 10;  // Used as a standard to compensate walking speed at other framerates.
+
 // Viewmode constants
 static final int MAP_VIEW = 1;
 static final int ROUTE_VIEW = 2;
 static final int DRIVE_VIEW = 3;
 static final int SUN_VIEW = 4;
-
-static final float PROCESSOR_SPEED_SCALE = 5;  //.5
+static final int CALIBRATE_VIEW = 5;
+static final int ACTUATOR_VIEW = 6;
 
 static final int FRAME_RATE = 60;
 static final int FOOT_DIAMETER = 30;
@@ -52,6 +54,8 @@ XMLElement config;
 
 Serial[] controllers = new Serial[4];
 
+int timerStart = 0;
+
 void setup() {
   size(800,480, JAVA2D); //800x480
   smooth();
@@ -69,7 +73,30 @@ void setup() {
   white = color(0,0,255);
   grey = color(0,0,100);
   black = color(0,0,0);
-  house = new House(new XYZ(0, 0,0), PI/2, 3, false);
+  
+  boolean simulate = false;
+  
+  // Initialize serial communications
+  // Change the indices if controllers are attached to other ports
+  try {
+    controllers[0] = new Serial(this, Serial.list()[3], 9600);
+    controllers[1] = new Serial(this, Serial.list()[1], 9600);
+    controllers[2] = new Serial(this, Serial.list()[4], 9600);
+  
+    controllers[0].bufferUntil('!');
+    controllers[1].bufferUntil('!');
+    controllers[2].bufferUntil('!');
+  }
+  catch (Exception e) {
+    println("Could not initialize serial ports! Running in simulation mode... ");
+    simulate = true;
+  }
+  
+  house = new House(new XYZ(0, 0,0), PI/2, 3, simulate);
+  
+  //house.modules[0].legs[0].frontAct.simulate = false;
+  //house.modules[0].legs[0].backAct.simulate = false;
+  //house.modules[0].legs[0].vertAct.simulate = false;
 
   colony = new ArrayList();
 
@@ -83,15 +110,6 @@ void setup() {
   zeroDist = 0;
 
   homeMenu();
-
-  // Change the indices if controllers are attached to other ports
-  controllers[0] = new Serial(this, Serial.list()[3], 9600);
-  controllers[1] = new Serial(this, Serial.list()[1], 9600);
-  controllers[2] = new Serial(this, Serial.list()[4], 9600);
-
-  controllers[0].bufferUntil('!');
-  controllers[1].bufferUntil('!');
-  controllers[2].bufferUntil('!');
 }
 
 void keyPressed() {
@@ -113,19 +131,6 @@ void keyPressed() {
 
   if(key == '1') debugTargets = false;
   if(key == '2') debugTargets = true;
-  if(key == 'z') {
-    XYZ a = new XYZ(house.modules[0].legs[0].offset);
-    XYZ b = new XYZ(house.modules[1].legs[1].offset);
-    a.translate(cos(house.modules[0].legs[0].rot) * house.modules[0].legs[0].foot.x +
-      sin(house.modules[0].legs[0].rot) * house.modules[0].legs[0].foot.y,
-    cos(house.modules[0].legs[0].rot) * house.modules[0].legs[0].foot.y -
-      sin(house.modules[0].legs[0].rot) * house.modules[0].legs[0].foot.x, 0);
-    b.translate(cos(house.modules[1].legs[1].rot) * house.modules[1].legs[1].foot.x +
-      sin(house.modules[1].legs[1].rot) * house.modules[1].legs[1].foot.y,
-    cos(house.modules[1].legs[1].rot) * house.modules[1].legs[1].foot.y -
-      sin(house.modules[1].legs[1].rot) * house.modules[1].legs[1].foot.x, 0);  
-    zeroDist = a.distance(b);  
-  }
 
   if(key == '=' || key == '+') {
     zoom *= 1.1;
@@ -170,30 +175,56 @@ void draw() {
   updatePositions();
   
   // Update the house(s)
-  for(int t=0; t<(turbo ? 3 : 1); t++) {
-    house.update();
+  for(int t=0; t<(turbo ? 60 : 1); t++) {
+    if(!house.calibrate) {
+      house.update();
+    }
+    else {
+      if(viewMode != ACTUATOR_VIEW)
+        house.updateLegsOnly();      
+    }
     for(int j=0; j<colony.size(); j++) {
       ((House)colony.get(j)).update();  
     }
-    // Send new targets to leg controllers
-    for(int i=0; i<house.modules.length; i++) {
-        String out = "";
-        out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
-        out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
-        out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
-        out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
-        out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
-        out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
-        
-        // Send values twice for error-checking purposes
-        out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
-        out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
-        out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
-        out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
-        out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
-        out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";      
-        controllers[i].write(out);
-    }    
+    
+    if(!house.simulate) {
+      // Send new targets to leg controllers
+      for(int i=0; i<house.modules.length; i++) {
+          String out = "";
+          // Values are sent twice for error-checking purposes
+          // but only if the position has been read in from the controller already
+          // this prevents movement on startup.
+          if(house.modules[i].legs[0].frontAct.length != -1) {
+            out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
+            out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
+          }
+          if(house.modules[i].legs[0].backAct.length != -1) {
+            out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
+            out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
+          }
+          if(house.modules[i].legs[0].vertAct.length != -1) {    
+            out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
+            out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";          
+          }
+          if(house.modules[i].legs[1].frontAct.length != -1) {
+            out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
+            out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";        
+          }
+          if(house.modules[i].legs[1].backAct.length != -1) {
+            out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
+            out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
+          }
+          if(house.modules[i].legs[1].vertAct.length != -1) {
+            out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
+            out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
+          }
+          
+          try {  
+            controllers[i].write(out);
+          }
+          catch (Exception e) { }
+      }    
+    }
   }
  
 
@@ -337,7 +368,7 @@ void draw() {
     text("N", 0, -dialRadius - 15);
     text("S", 0, dialRadius + 15);
     text("E", dialRadius + 15, 0);
-    text("W", -dialRadius - 15, 0);
+    text("W", -dialRadius - 15, 0);  
 
     SunAngle sun = new SunAngle(-float(mouseY)/height*180+90,90-float(mouseX)/width*15);  // 42.375097,-71.105608 is cambridge, ma
     sun.datetime.add(Calendar.DAY_OF_YEAR, frameCount);
@@ -377,10 +408,18 @@ void draw() {
     text(t.toString(), 50, 50);
   }
 
-  // Draw the GUI
-  GUI.draw(); 
+  if(viewMode == ACTUATOR_VIEW) {
+    fill(0,0,0);
+    rectMode(CENTER);
+    for(int i=0; i<6; i++) {
+      rect((i+.5) * (width-80)/6, height/2, (width-80)/6. * .98, height);
+    }
+  }
 
   // Draw basic statistics
+  fill(0,0,0,80);
+  noStroke();
+  rect(width/2 - 40, height-20, width-80, 40);
   fill(white);
   textFont(Courier);
   textAlign(LEFT, CENTER);
@@ -389,7 +428,47 @@ void draw() {
 
   // Draw framerate counter and time
   textAlign(RIGHT,CENTER);
+  int elapsed = (int)millis() - timerStart;
+  text("T+"+nf(int(elapsed/360000.), 2) + ":" + nf(int(elapsed/60000.), 2) + "." + nf(int(elapsed/1000.), 2), width-90, height-30);
   text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
+
+  // Draw the GUI
+  GUI.draw(); 
+
+  if(viewMode == ACTUATOR_VIEW) {
+    noStroke();
+    int start = 0;
+    for(int a=0; a<GUI.clickables.size(); a++) { 
+      if((GUI.clickables.get(a)).getClass().getName() == "VSlider") {
+        start = a;
+        break;
+      }
+    }
+    for(int i=0; i<18; i++) {
+        int n = floor(i/6);
+        int m = i%6;
+        try {
+          VSlider s = (VSlider)GUI.clickables.get(i+start);
+        
+          //positions[i] = getPosition(n,m);
+    
+          fill(blue);
+          ellipse(s.center.x, map(house.modules[n].legs[floor(m/3)].getAct(m%3).length, s.min, s.max, s.center.y + s.height/2 -s.width/2, s.center.y - s.height/2 + s.width/2), s.width*.5, s.width*.5);
+      
+          textFont(Courier);
+          textAlign(CENTER, CENTER);
+          fill(white);
+          text(house.modules[n].legs[floor(m/3)].getAct(m%3).getTargetCount(), s.center.x, height-80);
+          text(i%3 == 0 ? "FRONT" : i%3 == 1 ? "BACK" : "TOP", s.center.x, 70);
+          
+          if(i%3 == 1) {
+            textFont(HelveticaBold);
+            text(ceil(i/3) + 1, s.center.x, height-53);
+          }
+        }
+        catch(ClassCastException e) { break; }
+    }    
+  }
 }
 

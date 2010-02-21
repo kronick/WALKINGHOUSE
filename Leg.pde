@@ -1,14 +1,15 @@
+/*
 public class Leg {    
   // Default actuator properties
   final float H_ACTUATOR_MIN = 70 * MODULE_LENGTH/124;      // Min length from joint at frame to center of vertical tube
   final float H_ACTUATOR_MAX = 100 * MODULE_LENGTH/124;    //100
   final float V_ACTUATOR_MIN = 5 * MODULE_LENGTH/124;      // Min length along v tube past the point where h actuators meet
   final float V_ACTUATOR_MAX = 45 * MODULE_LENGTH/124;
-  final float H_ACTUATOR_SPEED = .3                    * PROCESSOR_SPEED_SCALE;
-  final float V_ACTUATOR_SPEED = H_ACTUATOR_SPEED / 5 * PROCESSOR_SPEED_SCALE;
+  final float H_ACTUATOR_SPEED = 1.5;
+  final float V_ACTUATOR_SPEED = H_ACTUATOR_SPEED / 5.;
   
   // 20 seconds to lift
-  // 10 seconds to translate forward
+  // 6 seconds to translate forward
   
   // Define leg frame properties
   static final float FRAME_BASE = 88 * MODULE_LENGTH/124;    // Front-back distance between horizontal actuators
@@ -39,12 +40,15 @@ public class Leg {
   
   float rot;
   
+  boolean simulate;
   
   
-  Leg(XYZ iCenter, float irot) {
-    this.frontAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .0433);
-    this.backAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .0433);
-    this.vertAct = new Actuator(V_ACTUATOR_MAX, V_ACTUATOR_MIN, V_ACTUATOR_SPEED, .0111);
+  Leg(XYZ iCenter, float irot, boolean simulate) {
+    this.simulate = simulate;
+    
+    this.frontAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .0433, simulate);
+    this.backAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .0433, simulate);
+    this.vertAct = new Actuator(V_ACTUATOR_MAX, V_ACTUATOR_MIN, V_ACTUATOR_SPEED, .0111, simulate);
     
     this.rot = irot;
     this.offset = new XYZ(iCenter);
@@ -60,13 +64,7 @@ public class Leg {
     BODY_COLOR = color(0,0,150);    
   }
   
-  void update(boolean simulate) {
-    /*if(oscillate) {
-      this.frontAct.setPos((cos(radians(frameCount%360))+1)/2 * (this.frontAct.maxLength - this.frontAct.minLength) + this.frontAct.minLength);
-      this.backAct.setPos((sin(radians(frameCount%360))+1)/2 * (this.backAct.maxLength - this.backAct.minLength) + this.backAct.minLength);
-      this.vertAct.setPos((sin(radians(frameCount/2%360))+1)/2 * (this.vertAct.maxLength - this.vertAct.minLength) + this.vertAct.minLength);
-    }
-    */
+  void update() {
     float[] newPos = this.IKsolve(this.target);
     if(this.possible(this.target) || true) {
       this.frontAct.setPos(newPos[0]);
@@ -101,6 +99,13 @@ public class Leg {
     else return false;
   }
   
+  void targetCenterUp() {
+    this.setTarget(new XYZ(middlePosition.x, middlePosition.y, House.FOOT_UP_LEVEL), true); 
+  }
+  void targetCenterDown() {
+    this.setTarget(new XYZ(middlePosition.x, middlePosition.y, House.FOOT_DOWN_LEVEL), true);
+  }
+  
   void jumpTarget(XYZ vector, float rotation) {
     this.jumpTarget(vector, 0, this.foot);  
   }
@@ -132,14 +137,6 @@ public class Leg {
       angular.rotate(rotation);    // Rotate that vector
       angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component
       angular.rotate(this.rot);    // Rotate to be in local coordinate system
-      
-      /*
-      angular = new XYZ(-(toCenter.y - test.y), 
-                       toCenter.x - test.x, 0);
-      angular.normalize();
-      angular.scale(rotation);    
-      angular.scale(this.EPSILON); 
-      */
       
       test.translate(linear);    // Add a little bit in the desired direction
       test.translate(angular);
@@ -217,6 +214,10 @@ public class Leg {
     this.draw(view,1, pushing);  
   }
   
+  void moveActuators(float dfront, float dback, float dvert) {
+    setTarget(findFoot(frontAct.length + dfront, backAct.length + dback, vertAct.length+dvert), true);
+  }
+  
   void draw(int view, float zoom, boolean pushing) {
     switch (view) {
       case House.TOP:      
@@ -237,7 +238,7 @@ public class Leg {
           ellipse(this.vertex.x, this.vertex.y, 10, 10);    
         
           // Foot
-          float zFactor = (House.FOOT_DOWN_LEVEL - this.foot.z)/(.5*House.FOOT_UP_LEVEL) + 1;  // Fake Z axis scaling        
+          float zFactor = (House.FOOT_DOWN_LEVEL - this.foot.z)/(House.FOOT_UP_LEVEL) + 1.5;  // Fake Z axis scaling        
           fill(40, pushing ? 250 : 50, pushing ? 255 : 150);
           noStroke();
           ellipse(this.foot.x, this.foot.y, FOOT_DIAMETER * zFactor, FOOT_DIAMETER * zFactor);  
@@ -310,4 +311,4 @@ public class Leg {
         break;  
     }
   }
-}
+}*/

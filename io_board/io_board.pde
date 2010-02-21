@@ -151,7 +151,7 @@ void setup()
     int stored = int(EEPROM.read(2*i+1)) | (int(EEPROM.read(2*i)) << 8);
     if(stored == 65535) // This is the default value and obviously invalid, set to 0
       stored = 0;
-    //set_count(i, stored);
+    set_count(i, stored);
       
     delay(10);             
 

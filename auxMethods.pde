@@ -1,3 +1,7 @@
+float frameRateFactor() {
+  return BASE_FRAMERATE / frameRate;  
+}
+
 
 boolean isPushingLeg(int i, int j, int phase) {
   if(((i+j) % 2 == 0 && phase == -1) || ((i+j) % 2 != 0 && phase == 1)) {
