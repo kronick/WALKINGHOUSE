@@ -1,3 +1,4 @@
+/*
 public class Leg {    
   // Default actuator properties
   final float H_ACTUATOR_MIN = 70 * MODULE_LENGTH/124;      // Min length from joint at frame to center of vertical tube
@@ -64,12 +65,6 @@ public class Leg {
   }
   
   void update() {
-    /*if(oscillate) {
-      this.frontAct.setPos((cos(radians(frameCount%360))+1)/2 * (this.frontAct.maxLength - this.frontAct.minLength) + this.frontAct.minLength);
-      this.backAct.setPos((sin(radians(frameCount%360))+1)/2 * (this.backAct.maxLength - this.backAct.minLength) + this.backAct.minLength);
-      this.vertAct.setPos((sin(radians(frameCount/2%360))+1)/2 * (this.vertAct.maxLength - this.vertAct.minLength) + this.vertAct.minLength);
-    }
-    */
     float[] newPos = this.IKsolve(this.target);
     if(this.possible(this.target) || true) {
       this.frontAct.setPos(newPos[0]);
@@ -104,6 +99,13 @@ public class Leg {
     else return false;
   }
   
+  void targetCenterUp() {
+    this.setTarget(new XYZ(middlePosition.x, middlePosition.y, House.FOOT_UP_LEVEL), true); 
+  }
+  void targetCenterDown() {
+    this.setTarget(new XYZ(middlePosition.x, middlePosition.y, House.FOOT_DOWN_LEVEL), true);
+  }
+  
   void jumpTarget(XYZ vector, float rotation) {
     this.jumpTarget(vector, 0, this.foot);  
   }
@@ -135,14 +137,6 @@ public class Leg {
       angular.rotate(rotation);    // Rotate that vector
       angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component
       angular.rotate(this.rot);    // Rotate to be in local coordinate system
-      
-      /*
-      angular = new XYZ(-(toCenter.y - test.y), 
-                       toCenter.x - test.x, 0);
-      angular.normalize();
-      angular.scale(rotation);    
-      angular.scale(this.EPSILON); 
-      */
       
       test.translate(linear);    // Add a little bit in the desired direction
       test.translate(angular);
@@ -218,6 +212,10 @@ public class Leg {
   
   void draw(int view, boolean pushing) {
     this.draw(view,1, pushing);  
+  }
+  
+  void moveActuators(float dfront, float dback, float dvert) {
+    setTarget(findFoot(frontAct.length + dfront, backAct.length + dback, vertAct.length+dvert), true);
   }
   
   void draw(int view, float zoom, boolean pushing) {
@@ -313,4 +311,4 @@ public class Leg {
         break;  
     }
   }
-}
+}*/

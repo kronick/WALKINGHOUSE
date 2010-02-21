@@ -11,6 +11,7 @@ static final int ROUTE_VIEW = 2;
 static final int DRIVE_VIEW = 3;
 static final int SUN_VIEW = 4;
 static final int CALIBRATE_VIEW = 5;
+static final int ACTUATOR_VIEW = 6;
 
 static final int FRAME_RATE = 60;
 static final int FOOT_DIAMETER = 30;
@@ -93,9 +94,9 @@ void setup() {
   
   house = new House(new XYZ(0, 0,0), PI/2, 3, simulate);
   
-  house.modules[0].legs[0].frontAct.simulate = false;
-  house.modules[0].legs[0].backAct.simulate = false;
-  house.modules[0].legs[0].vertAct.simulate = false;
+  //house.modules[0].legs[0].frontAct.simulate = false;
+  //house.modules[0].legs[0].backAct.simulate = false;
+  //house.modules[0].legs[0].vertAct.simulate = false;
 
   colony = new ArrayList();
 
@@ -179,7 +180,8 @@ void draw() {
       house.update();
     }
     else {
-      house.updateLegsOnly();      
+      if(viewMode != ACTUATOR_VIEW)
+        house.updateLegsOnly();      
     }
     for(int j=0; j<colony.size(); j++) {
       ((House)colony.get(j)).update();  
@@ -366,7 +368,7 @@ void draw() {
     text("N", 0, -dialRadius - 15);
     text("S", 0, dialRadius + 15);
     text("E", dialRadius + 15, 0);
-    text("W", -dialRadius - 15, 0);
+    text("W", -dialRadius - 15, 0);  
 
     SunAngle sun = new SunAngle(-float(mouseY)/height*180+90,90-float(mouseX)/width*15);  // 42.375097,-71.105608 is cambridge, ma
     sun.datetime.add(Calendar.DAY_OF_YEAR, frameCount);
@@ -406,10 +408,18 @@ void draw() {
     text(t.toString(), 50, 50);
   }
 
-  // Draw the GUI
-  GUI.draw(); 
+  if(viewMode == ACTUATOR_VIEW) {
+    fill(0,0,0);
+    rectMode(CENTER);
+    for(int i=0; i<6; i++) {
+      rect((i+.5) * (width-80)/6, height/2, (width-80)/6. * .98, height);
+    }
+  }
 
   // Draw basic statistics
+  fill(0,0,0,80);
+  noStroke();
+  rect(width/2 - 40, height-20, width-80, 40);
   fill(white);
   textFont(Courier);
   textAlign(LEFT, CENTER);
@@ -422,5 +432,43 @@ void draw() {
   text("T+"+nf(int(elapsed/360000.), 2) + ":" + nf(int(elapsed/60000.), 2) + "." + nf(int(elapsed/1000.), 2), width-90, height-30);
   text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
+
+  // Draw the GUI
+  GUI.draw(); 
+
+  if(viewMode == ACTUATOR_VIEW) {
+    noStroke();
+    int start = 0;
+    for(int a=0; a<GUI.clickables.size(); a++) { 
+      if((GUI.clickables.get(a)).getClass().getName() == "VSlider") {
+        start = a;
+        break;
+      }
+    }
+    for(int i=0; i<18; i++) {
+        int n = floor(i/6);
+        int m = i%6;
+        try {
+          VSlider s = (VSlider)GUI.clickables.get(i+start);
+        
+          //positions[i] = getPosition(n,m);
+    
+          fill(blue);
+          ellipse(s.center.x, map(house.modules[n].legs[floor(m/3)].getAct(m%3).length, s.min, s.max, s.center.y + s.height/2 -s.width/2, s.center.y - s.height/2 + s.width/2), s.width*.5, s.width*.5);
+      
+          textFont(Courier);
+          textAlign(CENTER, CENTER);
+          fill(white);
+          text(house.modules[n].legs[floor(m/3)].getAct(m%3).getTargetCount(), s.center.x, height-80);
+          text(i%3 == 0 ? "FRONT" : i%3 == 1 ? "BACK" : "TOP", s.center.x, 70);
+          
+          if(i%3 == 1) {
+            textFont(HelveticaBold);
+            text(ceil(i/3) + 1, s.center.x, height-53);
+          }
+        }
+        catch(ClassCastException e) { break; }
+    }    
+  }
 }
 

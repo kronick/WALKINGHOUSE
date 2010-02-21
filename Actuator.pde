@@ -24,11 +24,13 @@ public class Actuator {
     this.minLength = iminLength;
     this.maxSpeed = imaxSpeed;
     this.counterFactor = counterFactor;
+    this.simulate = simulate;
     
     if(simulate)
       this.length = (this.maxLength - this.minLength) / 2 + this.minLength;  // Default to half-extended
-    else
+    else {
       this.length = -1;
+    }
       
     //this.length = this.minLength;
     this.goalLength = this.length;
@@ -80,7 +82,7 @@ public class Actuator {
   void updatePos() {
     // This should be done asynchronously when new serial data is received
     // What's below just provides simulated data and is run only if the parent leg/house is being simulated
-    if(!simulate) {
+    if(simulate) {
       this.length += this.drift;
       this.power = control.update(this.length, this.goalLength);
       if(abs(this.power) > this.maxSpeed * frameRateFactor())

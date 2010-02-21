@@ -43,13 +43,23 @@ void serialEvent(Serial p) {
 }
 
 boolean calibrate(int controller, int actuator) {
-  controllers[controller].write("C" + actuator + "*");
+  try {
+    controllers[controller].write("C" + actuator + "*");
+  }
+  catch (Exception e) {
+    println("Can't calibrate! Unable to communicate with serial port.");
+  }
   return true;
 }
 
 boolean setPosition(int controller, int actuator, int value) {
   String out = "M" + actuator + value + "*";
-  controllers[controller].write(out);
-  println(out);
-  return true;
+  try {
+    controllers[controller].write(out);
+    return true;
+  }
+  catch (Exception e) {
+     println("Could not write to the serial port!");
+     return false;
+  }
 }
