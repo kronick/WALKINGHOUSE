@@ -9,7 +9,7 @@ class House
   static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
   public float footDownLevel = 55;
   public float footUpLevel = 35;
-  
+   
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
   static final int RANDOM_NAV = 2;
@@ -480,7 +480,7 @@ public class Leg {
         this.vertex = this.findVertex(this.frontAct.length, this.backAct.length);
         this.foot = this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length);
         this.target = new XYZ(this.foot);
-        this.middlePosition = new XYZ(this.foot);
+        this.middlePosition = this.findFoot(this.frontAct.midlength, this.backAct.midlength, this.vertAct.midlength);
         
         SPINDLE_COLOR = color(0,0,255);
         BODY_COLOR = color(0,0,150);    
@@ -528,6 +528,10 @@ public class Leg {
           return true;
         }
         else return false;
+      }
+      
+      void moveTargetToFoot() {
+        this.setTarget(this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length));  
       }
       
       void targetCenterUp() {

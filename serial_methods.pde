@@ -31,11 +31,9 @@ void serialEvent(Serial p) {
     actuator = Integer.parseInt(inString.substring(1,2));
     value = Integer.parseInt(inString.substring(2, inString.length()-1));
     
-    if(actuator < 3 && module == 0) {
       if(actuator == 0 || actuator == 3) house.modules[module].legs[actuator < 3 ? 0 : 1].frontAct.updateLength(value);
       if(actuator == 1 || actuator == 4) house.modules[module].legs[actuator < 3 ? 0 : 1].backAct.updateLength(value);
       if(actuator == 2 || actuator == 5) house.modules[module].legs[actuator < 3 ? 0 : 1].vertAct.updateLength(value);
-    }
   }
   else if(command == 'M') {
    //println("received: " + inString); 
@@ -54,6 +52,7 @@ boolean calibrate(int controller, int actuator) {
 
 boolean setPosition(int controller, int actuator, int value) {
   String out = "M" + actuator + value + "*";
+  out += out;
   try {
     controllers[controller].write(out);
     return true;

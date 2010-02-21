@@ -80,8 +80,11 @@ void setup() {
   // Change the indices if controllers are attached to other ports
   try {
     controllers[0] = new Serial(this, Serial.list()[3], 9600);
+    //controllers[0].setDTR(false);
     controllers[1] = new Serial(this, Serial.list()[1], 9600);
+    //controllers[1].setDTR(false);
     controllers[2] = new Serial(this, Serial.list()[4], 9600);
+    //controllers[2].setDTR(false);
   
     controllers[0].bufferUntil('!');
     controllers[1].bufferUntil('!');
@@ -170,9 +173,21 @@ void mouseDragged() {
 
 
 void draw() {
-  //println(frameRate);
-
+  // Send commands to asynchronously update actuator lengths
   updatePositions();
+  
+  // Try to set initial targets 
+  for(int i=0; i<house.modules.length; i++) {
+    for(int j=0; j<house.modules[i].legs.length; j++) {
+      if(Float.isNaN(house.modules[i].legs[j].target.z)) {
+        house.modules[i].legs[j].target = house.modules[i].legs[j].findFoot(
+                                            house.modules[i].legs[j].frontAct.length,
+                                            house.modules[i].legs[j].backAct.length,
+                                            house.modules[i].legs[j].vertAct.length);
+      }
+    }
+  }
+  
   
   // Update the house(s)
   for(int t=0; t<(turbo ? 60 : 1); t++) {
@@ -186,43 +201,43 @@ void draw() {
     for(int j=0; j<colony.size(); j++) {
       ((House)colony.get(j)).update();  
     }
-    
-    if(!house.simulate) {
+
+    if(!house.simulate && viewMode != ACTUATOR_VIEW) {
       // Send new targets to leg controllers
       for(int i=0; i<house.modules.length; i++) {
           String out = "";
-          // Values are sent twice for error-checking purposes
-          // but only if the position has been read in from the controller already
+          // Positions are sent only if the position has been read in from the controller already
           // this prevents movement on startup.
-          if(house.modules[i].legs[0].frontAct.length != -1) {
+          if(house.modules[i].legs[0].frontAct.length != -1)
             out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
-            out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
-          }
-          if(house.modules[i].legs[0].backAct.length != -1) {
+          if(house.modules[i].legs[0].backAct.length != -1)
             out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
-            out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
-          }
-          if(house.modules[i].legs[0].vertAct.length != -1) {    
+          if(house.modules[i].legs[0].vertAct.length != -1)
             out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
-            out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";          
-          }
-          if(house.modules[i].legs[1].frontAct.length != -1) {
+          if(house.modules[i].legs[1].frontAct.length != -1)
             out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
-            out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";        
-          }
-          if(house.modules[i].legs[1].backAct.length != -1) {
+          if(house.modules[i].legs[1].backAct.length != -1)
             out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
-            out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
-          }
-          if(house.modules[i].legs[1].vertAct.length != -1) {
+          if(house.modules[i].legs[1].vertAct.length != -1)
             out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
-            out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";
-          }
           
+          // Values are sent twice for error-checking purposes
+          if(house.modules[i].legs[0].frontAct.length != -1)          
+            out += "M0" + house.modules[i].legs[0].frontAct.getTargetCount() + "*";
+          if(house.modules[i].legs[0].backAct.length != -1)
+            out += "M1" + house.modules[i].legs[0].backAct.getTargetCount() + "*";
+          if(house.modules[i].legs[0].vertAct.length != -1)
+            out += "M2" + house.modules[i].legs[0].vertAct.getTargetCount() + "*";
+          if(house.modules[i].legs[1].frontAct.length != -1)
+            out += "M3" + house.modules[i].legs[1].frontAct.getTargetCount() + "*";
+          if(house.modules[i].legs[1].backAct.length != -1)
+            out += "M4" + house.modules[i].legs[1].backAct.getTargetCount() + "*";
+          if(house.modules[i].legs[1].vertAct.length != -1)
+            out += "M5" + house.modules[i].legs[1].vertAct.getTargetCount() + "*";          
           try {  
             controllers[i].write(out);
           }
-          catch (Exception e) { }
+          catch (Exception e) { println("Could not send command to controller."); }
       }    
     }
   }
@@ -437,6 +452,13 @@ void draw() {
   GUI.draw(); 
 
   if(viewMode == ACTUATOR_VIEW) {
+    // Set targets to current positions so the house doesn't move when leaving this mode
+    for(int i=0; i<house.modules.length; i++) {
+      for(int j=0; j<house.modules[i].legs.length; j++) {
+        house.modules[i].legs[j].moveTargetToFoot();
+      }
+    }    
+    
     noStroke();
     int start = 0;
     for(int a=0; a<GUI.clickables.size(); a++) { 
@@ -454,12 +476,12 @@ void draw() {
           //positions[i] = getPosition(n,m);
     
           fill(blue);
-          ellipse(s.center.x, map(house.modules[n].legs[floor(m/3)].getAct(m%3).length, s.min, s.max, s.center.y + s.height/2 -s.width/2, s.center.y - s.height/2 + s.width/2), s.width*.5, s.width*.5);
+          ellipse(s.center.x, map(house.modules[n].legs[floor(m/3)].getAct(m%3).getLengthCount(), s.min, s.max, s.center.y + s.height/2 -s.width/2, s.center.y - s.height/2 + s.width/2), s.width*.5, s.width*.5);
       
           textFont(Courier);
           textAlign(CENTER, CENTER);
           fill(white);
-          text(house.modules[n].legs[floor(m/3)].getAct(m%3).getTargetCount(), s.center.x, height-80);
+          text(house.modules[n].legs[floor(m/3)].getAct(m%3).getLengthCount(), s.center.x, height-80);
           text(i%3 == 0 ? "FRONT" : i%3 == 1 ? "BACK" : "TOP", s.center.x, 70);
           
           if(i%3 == 1) {

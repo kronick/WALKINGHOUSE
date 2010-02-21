@@ -5,6 +5,8 @@ public class Actuator {
   public float goalLength;
   public float speed;
   
+  public float midlength;
+  
   public float maxLength;
   public float minLength;
   public float maxSpeed;
@@ -28,9 +30,10 @@ public class Actuator {
     
     if(simulate)
       this.length = (this.maxLength - this.minLength) / 2 + this.minLength;  // Default to half-extended
-    else {
+    else
       this.length = -1;
-    }
+    
+    this.midlength = (this.maxLength - this.minLength) / 2 + this.minLength;
       
     //this.length = this.minLength;
     this.goalLength = this.length;
@@ -64,6 +67,9 @@ public class Actuator {
   int getTargetCount() {
     return int((this.goalLength-this.minLength) / this.counterFactor);  
   }
+  int getLengthCount() {
+    return int((this.length-this.minLength) / this.counterFactor);  
+  }  
   
   boolean possible(float goal) {
     if(goal > this.minLength && goal < this.maxLength)

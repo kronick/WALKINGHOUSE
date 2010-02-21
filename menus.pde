@@ -94,10 +94,14 @@ void sunMenu() {
 
 void configMenu() {
   GUI.clearElements();
-  Button calibrateButton = new Button(new XY(width/2, 150), 300, 50, "CALIBRATE", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(SINGLE_LEG); } } ); 
-  Button stepheightButton = new Button(new XY(width/2, 200), 300, 50, "STEP HEIGHT", new Action() { void act(float x, float y) { stepHeightMenu(); } } ); 
+  Button calibrateButton = new Button(new XY(width/2, 150), 300, 50, "CALIBRATE", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(ALL_ACTS); } } ); 
+  Button moveLegButton = new Button(new XY(width/2, 200), 300, 50, "MOVE LEG", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(SINGLE_LEG); } } ); 
+  Button stepheightButton = new Button(new XY(width/2, 250), 300, 50, "STEP HEIGHT", new Action() { void act(float x, float y) { stepHeightMenu(); } } );
+ 
+  Button exitButton = new Button(new XY(width/2, 350), 300, 50, "EXIT", new Action() { void act(float x, float y) { exit(); } } ); 
   
   GUI.clickables.add(calibrateButton);
+  GUI.clickables.add(moveLegButton);
   GUI.clickables.add(stepheightButton);
   
   addModeIcons();
@@ -145,17 +149,13 @@ void calibrateMenu(int mode) {
      Button fiveButton  = new Button(new XY(width/2+75, height-25), 50, 50, "5", new Action() { void act(float x, float y) { setConfigLeg(2,0); calibrateMenu(); } } ); 
      Button sixButton  = new Button(new XY(width/2+125, height-25), 50, 50, "6", new Action() { void act(float x, float y) { setConfigLeg(2,1); calibrateMenu(); } } ); 
      
-     Button legButton  = new Button(new XY(width/2-50, height-75), 100, 50, "LEG", new Action() { void act(float x, float y) { calibrateMenu(SINGLE_LEG); } } ); 
-     Button actButton  = new Button(new XY(width/2+50, height-75), 100, 50, "ACT", new Action() { void act(float x, float y) { calibrateMenu(ALL_ACTS); } } ); 
-     
+  
      GUI.clickables.add(oneButton);
      GUI.clickables.add(twoButton);
      GUI.clickables.add(threeButton);
      GUI.clickables.add(fourButton);
      GUI.clickables.add(fiveButton);
      GUI.clickables.add(sixButton);
-     GUI.clickables.add(legButton);
-     GUI.clickables.add(actButton);
      
      if(configLegi > -1) {
        if(mode == SINGLE_ACT) {
