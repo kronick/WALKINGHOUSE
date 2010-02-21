@@ -4,8 +4,8 @@ class House
   static final int TOP = 0;
   static final int FRONT = 1;
   static final int SIDE = 2;
-  static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
-  static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46  
+  static final float FOOT_DOWN_LEVEL = 45 * MODULE_LENGTH/124;    // Height to walk above ground.
+  static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 35  
   
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
