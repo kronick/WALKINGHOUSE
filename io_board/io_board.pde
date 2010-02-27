@@ -66,7 +66,7 @@ char buffer[32];  // For building strings
 
 // Slave Selects
 //byte SS[6] = {14, 15, 16, 17, 18, 19};
-byte SS[6] = {19, 18, 17, 16, 15, 14};
+byte SS[6] = {18, 19, 17, 16, 15, 14};
            // LF  LB  LV  RF  RB  RV
            
 byte outputPins[6] = {10, 11, 6, 9, 3, 5};
@@ -95,7 +95,8 @@ int maybenoise[6];
 void setup() 
 { 
   for(int i=0; i<6; i++) {
-    PWMout[i].attach(outputPins[i]);  
+    PWMout[i].attach(outputPins[i]);
+    set_PWM(i,0);  
   }
   /*
   PWMout[0].attach(3);

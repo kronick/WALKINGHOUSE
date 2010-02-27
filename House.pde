@@ -155,12 +155,13 @@ class House
           for(int j=0; j<this.modules[i].legs.length; j++) {
             if(isPushingLeg(i, j, gaitPhase)){              
               if(modules[i].legs[j].foot.z < footDownLevel) {  // Down (ground) is in the +z direction
-                if(modules[i].legs[j].target.z <= footDownLevel+1) {
+                if(modules[i].legs[j].target.z <= footDownLevel+3) {
                   XYZ move = new XYZ(0,0,VERTICAL_EPSILON);
                   move.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
                   if(!modules[i].legs[j].moveTarget(move)) {
                     modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footDownLevel+1), true);
                   }
+                  //allDown = false;
                 }
                 allDown = false;
               }
@@ -175,6 +176,7 @@ class House
                   if(!modules[i].legs[j].moveTarget(move)) {
                     modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footUpLevel-3), true);
                   }
+                  //allUp = false;
                 }
                 allUp = false;
               }              

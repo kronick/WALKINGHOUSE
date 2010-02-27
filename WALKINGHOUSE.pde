@@ -100,7 +100,8 @@ void setup() {
   //house.modules[0].legs[0].frontAct.simulate = false;
   //house.modules[0].legs[0].backAct.simulate = false;
   //house.modules[0].legs[0].vertAct.simulate = false;
-
+  
+  house.modules[2].legs[0].vertAct.counterFactor = 0.017;
   colony = new ArrayList();
 
   GUI = new GUIManager();
