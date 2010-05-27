@@ -51,7 +51,7 @@ class House
   
   static final float VERTICAL_EPSILON = .1;    // .024
   static final float HORIZONTAL_EPSILON = .25; // .125
-  static final float ANGULAR_EPSILON = .005;
+  static final float ANGULAR_EPSILON = .05;
   
   
   public String status = "";
@@ -76,7 +76,7 @@ class House
     this.gaitPhase = -1;
     this.translationVector = new XYZ(0,0,0);
     this.stepVector = new XYZ(0,0,0);
-    this.translationSpeed = 1;
+    this.translationSpeed = 4;
     this.rotation = 0;
     this.rotationCenter = new XYZ(0,0,0);
     

@@ -103,6 +103,7 @@ void configMenu() {
   GUI.clickables.add(calibrateButton);
   GUI.clickables.add(moveLegButton);
   GUI.clickables.add(stepheightButton);
+  GUI.clickables.add(exitButton);
   
   addModeIcons();
 }

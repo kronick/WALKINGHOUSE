@@ -31,6 +31,7 @@ int cycle = 0;
 #define SETCOM 2   // Set actuator position
 #define GETCOM 3   // Get actuator position
 #define CALCOM 4   // Calibrate
+#define LEGCALOCM 5 // Calibrate leg
 
 char incoming = 0;    // Place to temporarily store incoming serial byte
 int c_type = -1;      // Stores current command type to process
@@ -147,6 +148,10 @@ void setup()
     digitalWrite(SS[i], HIGH);
     delay(10);    
     
+    digitalWrite(SS[i],LOW);
+    spi_transfer(CLEAR_STATUS);  // Set status to zero
+    digitalWrite(SS[i], HIGH);
+    delay(10);            
     
     // Read stored value from EEPROM and set counter
     int stored = int(EEPROM.read(2*i+1)) | (int(EEPROM.read(2*i)) << 8);
@@ -155,11 +160,6 @@ void setup()
     set_count(i, stored);
       
     delay(10);             
-
-    digitalWrite(SS[i],LOW);
-    spi_transfer(B00110000);  // Set status to zero
-    digitalWrite(SS[i], HIGH);
-    delay(10);        
     
     
     //digitalWrite(SS[i], LOW);
@@ -300,6 +300,9 @@ void loop()
         case 'C':
           c_type = CALCOM;
           break;
+        case 'L':
+          c_type = LEGCALCOM;
+          break;          
         default:  // If the command is anything else, essentially ignore it
           c_type = NONCOM;
           while(Serial.available() > 0) { Serial.read(); }
@@ -379,6 +382,40 @@ void loop()
           target[c_actuator] = 0;    // Set target to 0, too
           Serial.print("*C!");  // Acknowledge this is complete
           break;
+        case LEGCALCOM:
+          // NOTE: Calibration halts the control loop
+          // This routine calibrates all three actuators of one leg in sequence
+          int leg = (c_actuator%2) * 3;
+          for(int l=2; l>=0; l--) {
+            int last = get_count(leg + l);
+            int n = DEADTIME;
+            int timeout = 2000;
+            while(n > 0 && timeout > 0) {
+              set_PWM(leg + l, -500);  // Move inward
+              if(get_count(leg + l) == last)
+                n--;           // Count down if no movement
+              else {
+                n = DEADTIME;  // Reset if actuator moved
+                timeout--;
+              }
+              
+              last = get_count(leg + l);
+              
+              // Now twiddle the cylon pins
+              charlieplex.charlieWrite(pins[cylon], HIGH);  
+              delay(50);
+              charlieplex.clear();    
+              if(rev) cylon--; else cylon++;
+              if(cylon == 5) rev = true;
+              if(cylon == 0) rev = false;            
+            }
+  
+            
+            set_count(leg + l, 0);  // Set this point to be 0
+            target[leg + l] = 0;    // Set target to 0, too
+          }
+          Serial.print("*C!");  // Acknowledge this is complete
+          break;          
       }
 
       // Blink the indicator pin
