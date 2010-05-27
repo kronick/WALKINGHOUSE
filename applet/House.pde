@@ -4,9 +4,12 @@ class House
   static final int TOP = 0;
   static final int FRONT = 1;
   static final int SIDE = 2;
-  static final float FOOT_DOWN_LEVEL = 50 * MODULE_LENGTH/124;    // Height to walk above ground.
-  static final float FOOT_UP_LEVEL = 46 * MODULE_LENGTH/124;      // 55- 46  
-  
+
+  static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
+  static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
+  public float footDownLevel = 55;
+  public float footUpLevel = 35;
+   
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
   static final int RANDOM_NAV = 2;
@@ -46,13 +49,20 @@ class House
   public float distanceWalked = 0;
   public ArrayList breadcrumbs;
   
-  static final float VERTICAL_EPSILON = .125 * PROCESSOR_SPEED_SCALE;    // .024
-  static final float HORIZONTAL_EPSILON = .125 * PROCESSOR_SPEED_SCALE; // .125
+  static final float VERTICAL_EPSILON = .1;    // .024
+  static final float HORIZONTAL_EPSILON = .25; // .125
+  static final float ANGULAR_EPSILON = .01;
+  
   
   public String status = "";
   
-  House(XYZ icenter, float iangle, int imodules) {
+  boolean simulate;
+  boolean calibrate;
+  
+  House(XYZ icenter, float iangle, int imodules, boolean simulate) {
     this.center = new XYZ(icenter.x, icenter.y, icenter.z);  
+    this.simulate = simulate;
+    this.angle = iangle;
     
     // Populate with modules
     this.modules = new Module[imodules];
@@ -70,11 +80,11 @@ class House
     this.rotation = 0;
     this.rotationCenter = new XYZ(0,0,0);
     
+    this.calibrate = false;
+    
     this.heading = 0;
     
     this.stepCount = 0;
-    
-    this.angle = iangle;
     
     this.translated = new XYZ(0,0,0);
     this.rotated = 0;
@@ -124,14 +134,14 @@ class House
     if(translationVector.length() == 0 && rotation == 0) gaitState = 0;  // If no movement is specified, don't try to move!
     
     stepVector = new XYZ(translationVector);  
-    stepRotation = rotation;
+    stepRotation = rotation * frameRateFactor();
     
     switch(gaitState) {
       case 0:  // Stop everything!
         this.status = "House at rest.";
         for(int i=0; i<this.modules.length; i++) {
           for(int j=0; j<this.modules[i].legs.length; j++) {
-            modules[i].legs[j].setTarget(modules[i].legs[j].target);
+            //modules[i].legs[j].setTarget(modules[i].legs[j].target);
           }
         }      
         break;
@@ -144,11 +154,14 @@ class House
         for(int i=0; i<this.modules.length; i++) {
           for(int j=0; j<this.modules[i].legs.length; j++) {
             if(isPushingLeg(i, j, gaitPhase)){              
-              if(modules[i].legs[j].foot.z < FOOT_DOWN_LEVEL) {  // Down (ground) is in the +z direction
-                if(modules[i].legs[j].target.z <= FOOT_DOWN_LEVEL+1) {
-                  if(!modules[i].legs[j].moveTarget(new XYZ(0,0,VERTICAL_EPSILON))) {
-                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_DOWN_LEVEL+1), false);
+              if(modules[i].legs[j].foot.z < footDownLevel) {  // Down (ground) is in the +z direction
+                if(modules[i].legs[j].target.z <= footDownLevel+3) {
+                  XYZ move = new XYZ(0,0,VERTICAL_EPSILON);
+                  move.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+                  if(!modules[i].legs[j].moveTarget(move)) {
+                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footDownLevel+1), true);
                   }
+                  //allDown = false;
                 }
                 allDown = false;
               }
@@ -156,11 +169,14 @@ class House
             else {
               // Reset center of rotation
               modules[i].legs[j].toCenter = new XYZ(modules[i].legs[j].offset);              
-              if(modules[i].legs[j].foot.z > FOOT_UP_LEVEL) {  // Up is in the -z direction
-                if(modules[i].legs[j].target.z >= FOOT_UP_LEVEL-1) {
-                  if(!modules[i].legs[j].moveTarget(new XYZ(0,0,-VERTICAL_EPSILON))) {
-                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,FOOT_UP_LEVEL-1), false);
+              if(modules[i].legs[j].foot.z > footUpLevel) {  // Up is in the -z direction
+                if(modules[i].legs[j].target.z >= footUpLevel-3) {
+                  XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
+                  move.scale(frameRateFactor());
+                  if(!modules[i].legs[j].moveTarget(move)) {
+                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footUpLevel-3), true);
                   }
+                  //allUp = false;
                 }
                 allUp = false;
               }              
@@ -174,10 +190,7 @@ class House
               int sign = j==1 ? 1 : -1;          
               if(!isPushingLeg(i, j, gaitPhase)){
                 // Begin with target in the center of the leg's range of motion
-                modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL));
-                //modules[i].legs[j].jumpTarget(new XYZ(-this.stepVector.x, -this.stepVector.y, this.stepVector.z),
-                //                              stepRotation * -1,
-                //                              new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, FOOT_UP_LEVEL));
+                modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, footUpLevel-3));
               }          
             }
           }
@@ -207,13 +220,14 @@ class House
               orig.rotate(modules[i].legs[j].rot);
               orig.translate(modules[i].legs[j].toCenter); // Vector from center of house to the test point
               angular = new XYZ(orig);
-              angular.rotate(stepRotation * .015);    // Rotate that vector
+              angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
               angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
               
               delta.translate(angular);              
               float factor = delta.length();
               //delta.normalize();
               delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
+              delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
               
               if(stop && isPushingLeg(i, j, gaitPhase))
                 delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
@@ -234,7 +248,7 @@ class House
                    linChange.scale(1./this.modules.length);
                    
                    this.translated.translate(linChange);
-                   this.rotated += factor * stepRotation * .015 / this.modules.length;
+                   this.rotated += factor * stepRotation * ANGULAR_EPSILON / this.modules.length;
                  }
               }
               else {
@@ -278,6 +292,16 @@ class House
     distanceWalked += this.translated.length();
     
     if(gaitState == 3) breadcrumbs.add(new XYZ(this.center.x, this.center.y, this.center.z));
+  }
+  
+  void updateLegsOnly() {
+    for(int i=0; i<this.modules.length; i++) {
+      for(int j=0; j<this.modules[i].legs.length; j++) {
+        boolean sim = true;
+        if(i == 0 && j == 0) sim = false;
+        modules[i].legs[j].update();    
+      }
+    }  
   }
   
   XYZ getTranslation() {
@@ -385,5 +409,347 @@ class House
     img.endDraw();
     return img;
   }         
+
+  class Module
+  {
+    public Leg[] legs;
+    
+    static final float LEG_Y_OFFSET = 7;
+    public XYZ center;
+
+    Module(XYZ icenter) {
+      this.legs = new Leg[2];
+      this.center = icenter;
+  
+      // Add one leg rotated 0, one rotated PI radians for each module, half a module width from the center    
+      legs[0] = new Leg(new XYZ(icenter.x, icenter.y + MODULE_WIDTH/2 + LEG_Y_OFFSET, icenter.z), 0);
+      legs[1] = new Leg(new XYZ(icenter.x, icenter.y - (MODULE_WIDTH/2 + LEG_Y_OFFSET), icenter.z), PI); 
+    }
+  }
+
+public class Leg {    
+      // Default actuator properties
+      final float H_ACTUATOR_MIN = 70 * MODULE_LENGTH/124;      // Min length from joint at frame to center of vertical tube
+      final float H_ACTUATOR_MAX = 100 * MODULE_LENGTH/124;    //100
+      final float V_ACTUATOR_MIN = 5 * MODULE_LENGTH/124;      // Min length along v tube past the point where h actuators meet
+      final float V_ACTUATOR_MAX = 45 * MODULE_LENGTH/124;
+      final float H_ACTUATOR_SPEED = 1.5;
+      final float V_ACTUATOR_SPEED = H_ACTUATOR_SPEED / 5.;
+      
+      // 20 seconds to lift
+      // 6 seconds to translate forward
+      
+      // Define leg frame properties
+      static final float FRAME_BASE = 88 * MODULE_LENGTH/124;    // Front-back distance between horizontal actuators
+      static final float FRAME_HEIGHT = 88 * MODULE_LENGTH/124;  // Top-bottom distance between base and connection of vertical actuator
+      static final float FRAME_SLANT = 100 * MODULE_LENGTH/124;  // Distance along vertical actuator where horizontal actuators attach
+      final float FRAME_ANGLE = radians(30);   // Angle in radians frame makes with vertical
+      XYZ FRAME_TOP = new XYZ(0, FRAME_HEIGHT * sin(FRAME_ANGLE), -FRAME_HEIGHT * cos(FRAME_ANGLE));
+      
+      // Visual constants
+      static final int ACTUATOR_SPINDLE_THICKNESS = 2;
+      static final int ACTUATOR_BODY_THICKNESS = 5;
+      color SPINDLE_COLOR = color(0,0,255);
+      color BODY_COLOR = color(0,0,150);   
+      
+      final float EPSILON = .1; // Used for goal finding, NOT motion
+      
+      // Three actuators per leg
+      Actuator frontAct, backAct, vertAct;
+      
+      XYZ offset;
+      XYZ toCenter;
+      XYZ vertex;
+      XYZ foot;
+      
+      XYZ middlePosition;
+      
+      XYZ target;
+      
+      float rot;
+      
+      
+      Leg(XYZ iCenter, float irot) {
+        this.frontAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .0433, simulate);
+        this.backAct = new Actuator(H_ACTUATOR_MAX, H_ACTUATOR_MIN, H_ACTUATOR_SPEED, .0433, simulate);
+        this.vertAct = new Actuator(V_ACTUATOR_MAX, V_ACTUATOR_MIN, V_ACTUATOR_SPEED, .0111, simulate);
+        
+        this.rot = irot;
+        this.offset = new XYZ(iCenter);
+        this.toCenter = new XYZ(offset);
+        //this.toCenter.rotate(this.rot);
+        
+        this.vertex = this.findVertex(this.frontAct.length, this.backAct.length);
+        this.foot = this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length);
+        this.target = new XYZ(this.foot);
+        this.middlePosition = this.findFoot(this.frontAct.midlength, this.backAct.midlength, this.vertAct.midlength);
+        
+        SPINDLE_COLOR = color(0,0,255);
+        BODY_COLOR = color(0,0,150);    
+      }
+      
+      Actuator getAct(int i) {
+        switch(i) {
+          case 0: return this.frontAct;
+          case 1: return this.backAct;
+          case 2: return this.vertAct;
+          default: return null;
+        }
+      }
+      
+      void update() {
+        float[] newPos = this.IKsolve(this.target);
+        if(this.possible(this.target) || true) {
+          this.frontAct.setPos(newPos[0]);
+          this.backAct.setPos(newPos[1]);
+          this.vertAct.setPos(newPos[2]);
+        }
+       
+        if(simulate) {
+          // Invoke methods to simulate leg movement only if simulation is true
+          this.frontAct.updatePos();  
+          this.backAct.updatePos();
+          this.vertAct.updatePos();
+        }
+        this.vertex = this.findVertex(this.frontAct.length, this.backAct.length);
+        this.foot = this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length);    
+      }
+        
+      boolean possible(XYZ t) {
+        float[] newPos = this.IKsolve(new XYZ(t));
+        return this.frontAct.possible(newPos[0]) && this.backAct.possible(newPos[1]) && this.vertAct.possible(newPos[2]);   
+      }
+      
+      boolean setTarget(XYZ t) {
+        return this.setTarget(t, false);
+      }
+      
+      boolean setTarget(XYZ t, boolean force) {
+        if(this.possible(t) || force) {
+          this.target = new XYZ(t);  
+          return true;
+        }
+        else return false;
+      }
+      
+      void moveTargetToFoot() {
+        this.setTarget(this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length), true);  
+      }
+      
+      void targetCenterUp() {
+        this.setTarget(new XYZ(middlePosition.x, middlePosition.y, footUpLevel), true); 
+      }
+      void targetCenterDown() {
+        this.setTarget(new XYZ(middlePosition.x, middlePosition.y, footDownLevel), true);
+      }
+      
+      void jumpTarget(XYZ vector, float rotation) {
+        this.jumpTarget(vector, 0, this.foot);  
+      }
+      
+      float jumpTarget(XYZ vector, float rotation, XYZ start) {
+        // Finds maximum target from start position along vector
+        XYZ test = new XYZ(start);
+        
+        XYZ linear = new XYZ(vector);
+        //linear.normalize();
+        // Linear vector magnitude and rotation amount should be scaled -1 to 1 coming in, so scale both by this.EPSILON to stay proportional but become a small step
+        linear.scale(this.EPSILON);
+        rotation *= this.EPSILON * .01;
+        println(rotation);
+        linear.rotate(rot);          // Rotate linear vector to be in local coordinate system
+        
+        XYZ angular = new XYZ(0,0,0);
+        XYZ orig;
+    
+        
+        float moved = 0; // Count how far the target is being moved.
+        
+        while(possible(test) && possible(new XYZ(test.x, test.y, footUpLevel-1)) && possible(new XYZ(test.x, test.y, footDownLevel+1))) {  // As long as test is a valid target
+          // Re-calculate angular component every time
+          orig = new XYZ(test);
+          orig.rotate(this.rot);
+          orig.translate(this.toCenter); // Vector from center of house to the test point
+          angular = new XYZ(orig);
+          angular.rotate(rotation);    // Rotate that vector
+          angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component
+          angular.rotate(this.rot);    // Rotate to be in local coordinate system
+          
+          test.translate(linear);    // Add a little bit in the desired direction
+          test.translate(angular);
+               
+          moved += this.EPSILON;
+        }
+        test.subtract(linear); // Back up one step
+        test.subtract(angular); // Back up one step    
+    
+        this.setTarget(test);             // And set this as the new target
+        
+        return moved;
+      }
+      
+      boolean moveTarget(XYZ e) { return this.moveTarget(e, false); }
+      
+      boolean moveTarget(XYZ e, boolean force) {
+        // Transform to local coordinate system
+        e.rotate(this.rot);
+    
+        XYZ t = new XYZ(this.target.x + e.x, this.target.y + e.y, this.target.z + e.z);
+        
+        if(force || (possible(new XYZ(t.x, t.y, t.z)) && 
+           possible(new XYZ(t.x, t.y, footUpLevel-1)) &&
+           possible(new XYZ(t.x, t.y, footDownLevel+1)))) { // Make sure we can move up or down from the new position
+          return setTarget(t, force);
+        }
+        else return false;
+      }
+      
+      XYZ findFoot(float front, float back, float vert) {
+        XYZ vertex = this.findVertex(front, back); 
+        // Calculate the coordinate of the top of the frame, use it to find the vector to the vertex, then extend by act3's length to find fo
+        XYZ footVector = new XYZ(vertex);
+        footVector.subtract(this.FRAME_TOP);
+        footVector.scale(1 + vert / FRAME_SLANT);
+        footVector.translate(FRAME_TOP);
+    
+        return footVector;   
+      }   
+    
+      XYZ findVertex(float front, float back) {
+        // CORRECT FORMULA AS OF 18 OCT 2009
+        XYZ vertex = new XYZ(0,0,0);
+        vertex.x = -(sq(back) - sq(front) - sq(FRAME_BASE)) / (2 * FRAME_BASE);
+        vertex.z = (sq(FRAME_BASE)/4 - (vertex.x*FRAME_BASE) + sq(FRAME_HEIGHT) - sq(FRAME_SLANT) + sq(front))
+          / (2*FRAME_HEIGHT);
+        vertex.y = sqrt(sq(front) - sq(vertex.x) - sq(vertex.z));
+      
+        // Now do the rotation about the x-axis by frameAngle + pi/2 radians and translate along x-axis to center on leg
+        vertex.set(-(vertex.x - FRAME_BASE/2),
+        (vertex.y * cos(-FRAME_ANGLE) - vertex.z * sin(-FRAME_ANGLE)),
+        -(vertex.y * sin(-FRAME_ANGLE) + vertex.z * cos(-FRAME_ANGLE)));
+        
+        //vertex.set(vertex.x, vertex.z, vertex.y);
+        return vertex;
+        
+      } 
+      
+      float[] IKsolve(XYZ goal) {
+        goal = new XYZ(goal);
+        float[] lengths = new float[3];
+        lengths[2] = goal.distance(this.FRAME_TOP) - this.FRAME_SLANT;
+        
+        goal.subtract(this.FRAME_TOP);
+        goal.normalize();
+        goal.scale(this.FRAME_SLANT);
+        goal.translate(this.FRAME_TOP);
+    
+        lengths[0] = goal.distance(new XYZ(this.FRAME_BASE/2, 0, 0));
+        lengths[1] = goal.distance(new XYZ(-this.FRAME_BASE/2, 0, 0));
+         
+        return lengths;
+      }
+      
+      void draw(int view, boolean pushing) {
+        this.draw(view,1, pushing);  
+      }
+      
+      void moveActuators(float dfront, float dback, float dvert) {
+        setTarget(findFoot(frontAct.length + dfront, backAct.length + dback, vertAct.length+dvert), true);
+      }
+      
+      void draw(int view, float zoom, boolean pushing) {
+        switch (view) {
+          case House.TOP:      
+            pushMatrix();
+              scale(zoom);  // Scale based on zoom factor   
+              rotate(-this.rot);
+            
+              // Circles at frame vertices
+              noFill();
+              stroke(150,70,80);
+              strokeWeight(5);
+              triangle(this.FRAME_TOP.x, this.FRAME_TOP.y, -this.FRAME_BASE / 2, 0, this.FRAME_BASE / 2, 0);
+              fill(150, 150, 255);
+              noStroke();
+              ellipse(this.FRAME_TOP.x, this.FRAME_TOP.y, 10, 10);
+              ellipse(-this.FRAME_BASE / 2, 0, 10, 10);
+              ellipse(this.FRAME_BASE / 2, 0, 10, 10);
+              ellipse(this.vertex.x, this.vertex.y, 10, 10);    
+            
+              // Foot
+              float zFactor = (55 - this.foot.z)/35. + 1.5;  // Fake Z axis scaling        
+              fill(40, pushing ? 250 : 50, pushing ? 255 : 150);
+              noStroke();
+              ellipse(this.foot.x, this.foot.y, FOOT_DIAMETER * zFactor, FOOT_DIAMETER * zFactor);  
+              fill(0,pushing ? 150 : 50,255);
+              ellipse(this.foot.x, this.foot.y, 10, 10);    
+              
+              // Vertical Actuator spindle
+              noFill();
+              stroke(SPINDLE_COLOR);  
+              strokeWeight(ACTUATOR_SPINDLE_THICKNESS);
+              line(this.FRAME_TOP.x, this.FRAME_TOP.y, this.foot.x, this.foot.y);
+            
+              // Vertical actuator body
+              stroke(BODY_COLOR);
+              strokeWeight(ACTUATOR_BODY_THICKNESS);
+              line(this.FRAME_TOP.x, this.FRAME_TOP.y, this.vertex.x, this.vertex.y);
+            
+              // Horizontal Actuator spindles
+              stroke(SPINDLE_COLOR);   
+              strokeWeight(ACTUATOR_SPINDLE_THICKNESS);
+              XYZ corner1 = new XYZ(-this.FRAME_BASE / 2, 0, 0);
+              XYZ corner2 = new XYZ(this.FRAME_BASE / 2, 0, 0);
+              line(corner1.x, corner1.y, this.vertex.x, this.vertex.y);
+              line(corner2.x, corner2.y, this.vertex.x, this.vertex.y);
+            
+              // Horizontal actuator bodies
+              stroke(BODY_COLOR);   
+              strokeWeight(ACTUATOR_BODY_THICKNESS);
+              XYZ temp = new XYZ(this.vertex);
+              temp.subtract(corner1);
+              temp.normalize();
+              temp.scale(this.H_ACTUATOR_MIN);
+              temp.translate(corner1);
+              line(corner1.x, corner1.y, temp.x, temp.y);
+            
+              temp = new XYZ(this.vertex);
+              temp.subtract(corner2);
+              temp.normalize();
+              temp.scale(this.H_ACTUATOR_MIN);
+              temp.translate(corner2);
+              line(corner2.x, corner2.y, temp.x, temp.y);  
+            
+              // Target position
+              pushMatrix();
+                translate(this.target.x, this.target.y);
+                stroke(0,0,255);
+                strokeWeight(1);
+                noFill();
+                line(-4, 0, 4, 0);
+                line(0, -4, 0, 4);
+                ellipse(0,0, 4, 4);
+                
+                if(debug) {
+                  // DRAWING FROM TARGET = (0,0)
+                  XYZ t = new XYZ(target);
+                  t.rotate(this.rot);
+                  t.translate(this.toCenter);
+                  t.rotate(-this.rot);
+                  line(0, 0, -t.x, -t.y);
+                }
+              popMatrix();
+            popMatrix();
+            break;
+          case House.FRONT:
+            
+            break;
+            
+          case House.SIDE:
+            
+            break;  
+        }
+      }
+    }  
 
 }

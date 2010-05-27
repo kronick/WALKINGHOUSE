@@ -51,7 +51,7 @@ class House
   
   static final float VERTICAL_EPSILON = .1;    // .024
   static final float HORIZONTAL_EPSILON = .25; // .125
-  static final float ANGULAR_EPSILON = .005;
+  static final float ANGULAR_EPSILON = .01;
   
   
   public String status = "";
@@ -533,7 +533,7 @@ public class Leg {
       }
       
       void moveTargetToFoot() {
-        this.setTarget(this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length));  
+        this.setTarget(this.findFoot(this.frontAct.length, this.backAct.length, this.vertAct.length), true);  
       }
       
       void targetCenterUp() {
@@ -588,16 +588,18 @@ public class Leg {
         return moved;
       }
       
-      boolean moveTarget(XYZ e) {
+      boolean moveTarget(XYZ e) { return this.moveTarget(e, false); }
+      
+      boolean moveTarget(XYZ e, boolean force) {
         // Transform to local coordinate system
         e.rotate(this.rot);
     
         XYZ t = new XYZ(this.target.x + e.x, this.target.y + e.y, this.target.z + e.z);
         
-        if(possible(new XYZ(t.x, t.y, t.z)) && 
+        if(force || (possible(new XYZ(t.x, t.y, t.z)) && 
            possible(new XYZ(t.x, t.y, footUpLevel-1)) &&
-           possible(new XYZ(t.x, t.y, footDownLevel+1))) { // Make sure we can move up or down from the new position
-          return setTarget(t);
+           possible(new XYZ(t.x, t.y, footDownLevel+1)))) { // Make sure we can move up or down from the new position
+          return setTarget(t, force);
         }
         else return false;
       }

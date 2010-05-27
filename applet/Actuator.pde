@@ -5,6 +5,8 @@ public class Actuator {
   public float goalLength;
   public float speed;
   
+  public float midlength;
+  
   public float maxLength;
   public float minLength;
   public float maxSpeed;
@@ -15,11 +17,24 @@ public class Actuator {
   private float drift; 
   private float noise;
   
-  Actuator(float imaxLength, float iminLength, float imaxSpeed) {
+  public float counterFactor;
+  
+  public boolean simulate;
+  
+  Actuator(float imaxLength, float iminLength, float imaxSpeed, float counterFactor, boolean simulate){
     this.maxLength = imaxLength;
     this.minLength = iminLength;
     this.maxSpeed = imaxSpeed;
-    this.length = (this.maxLength - this.minLength) / 2 + this.minLength;  // Default to half-extended
+    this.counterFactor = counterFactor;
+    this.simulate = simulate;
+    
+    if(simulate)
+      this.length = (this.maxLength - this.minLength) / 2 + this.minLength;  // Default to half-extended
+    else
+      this.length = -1;
+    
+    this.midlength = (this.maxLength - this.minLength) / 2 + this.minLength;
+      
     //this.length = this.minLength;
     this.goalLength = this.length;
     
@@ -39,15 +54,27 @@ public class Actuator {
     else {
       if(goal < this.minLength) this.goalLength = this.minLength;
       if(goal > this.maxLength) this.goalLength = this.maxLength;
-      println("Actuator over extending!");
       return false;
     }
   }
   
+  void updateLength(int count) {
+    // This method gets called upon receipt of serial data with a position update
+    this.length = this.minLength + count * this.counterFactor;
+    // Initialize goal if this is the first data received
+    if(this.goalLength == -1) this.goalLength = this.length;
+  }
+  int getTargetCount() {
+    return int((this.goalLength-this.minLength) / this.counterFactor);  
+  }
+  int getLengthCount() {
+    return int((this.length-this.minLength) / this.counterFactor);  
+  }  
+  
   boolean possible(float goal) {
     if(goal > this.minLength && goal < this.maxLength)
       return true;
-    else
+    else 
       return false;
   }      
   
@@ -59,12 +86,17 @@ public class Actuator {
   }
   
   void updatePos() {
-    this.length += this.drift;
-    this.power = control.update(this.length, this.goalLength);
-    if(abs(this.power) > this.maxSpeed)
-      this.power = (this.power < 0 ? -1 : 1) * this.maxSpeed;
-    this.power *= (1-random(0,this.noise));
-    this.length += this.power;
+    // This should be done asynchronously when new serial data is received
+    // What's below just provides simulated data and is run only if the parent leg/house is being simulated
+    if(simulate) {
+      this.length += this.drift;
+      this.power = control.update(this.length, this.goalLength);
+      if(abs(this.power) > this.maxSpeed * frameRateFactor())
+        this.power = (this.power < 0 ? -1 : 1) * this.maxSpeed * frameRateFactor();
+      this.power *= (1-random(0,this.noise));
+      this.length += this.power;
+    }
+    
   }
   
   PGraphics draw(float xscale, float yscale) {

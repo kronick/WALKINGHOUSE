@@ -12,6 +12,7 @@ static final int DRIVE_VIEW = 3;
 static final int SUN_VIEW = 4;
 static final int CALIBRATE_VIEW = 5;
 static final int ACTUATOR_VIEW = 6;
+static final int STATS_VIEW = 7;
 
 static final int FRAME_RATE = 60;
 static final int FOOT_DIAMETER = 30;
@@ -52,7 +53,10 @@ boolean follow = false;
 
 XMLElement config;
 
-Serial[] controllers = new Serial[4];
+Serial[] controllers = new Serial[3];
+Serial auxBoard;
+
+float[] powerHistory = new float[1000];
 
 int timerStart = 0;
 
@@ -80,15 +84,16 @@ void setup() {
   // Change the indices if controllers are attached to other ports
   try {
     controllers[0] = new Serial(this, Serial.list()[3], 9600);
-    //controllers[0].setDTR(false);
     controllers[1] = new Serial(this, Serial.list()[1], 9600);
-    //controllers[1].setDTR(false);
     controllers[2] = new Serial(this, Serial.list()[4], 9600);
-    //controllers[2].setDTR(false);
+    
+    //auxBoard = new Serial(this, Serial.list()[2], 9600);
   
     controllers[0].bufferUntil('!');
     controllers[1].bufferUntil('!');
     controllers[2].bufferUntil('!');
+
+    //auxBoard.bufferUntil('!');
   }
   catch (Exception e) {
     println("Could not initialize serial ports! Running in simulation mode... ");
@@ -96,11 +101,7 @@ void setup() {
   }
   
   house = new House(new XYZ(0, 0,0), PI/2, 3, simulate);
-  
-  //house.modules[0].legs[0].frontAct.simulate = false;
-  //house.modules[0].legs[0].backAct.simulate = false;
-  //house.modules[0].legs[0].vertAct.simulate = false;
-  
+
   house.modules[2].legs[0].vertAct.counterFactor = 0.017;
   colony = new ArrayList();
 
@@ -111,7 +112,9 @@ void setup() {
 
   mWheel = new ScrollEvent();
 
-  zeroDist = 0;
+  for(int i=0; i<powerHistory.length; i++) {
+    powerHistory[i] = 0;
+  }
 
   homeMenu();
 }
@@ -204,6 +207,12 @@ void draw() {
     }
 
     if(!house.simulate && viewMode != ACTUATOR_VIEW) {
+       for(int i=0; i<house.modules.length; i++) {
+         for(int j=0; j<house.modules[i].legs.length; j++) {
+           house.modules[i].legs[j].moveTarget(new XYZ(0, 0, 0), true);
+         }  
+       }      
+      
       // Send new targets to leg controllers
       for(int i=0; i<house.modules.length; i++) {
           String out = "";
@@ -492,6 +501,16 @@ void draw() {
         }
         catch(ClassCastException e) { break; }
     }    
+  }
+  
+  if(viewMode == STATS_VIEW) {
+    stroke(white);
+    strokeWeight(3);
+    beginShape();
+    for(int i=0; i<powerHistory.length; i++) {
+      vertex(i/powerHistory.length * width*.8, height-100-powerHistory[i]*height/100.);
+    }  
+    endShape();
   }
 }
 

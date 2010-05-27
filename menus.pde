@@ -104,6 +104,8 @@ void configMenu() {
   GUI.clickables.add(moveLegButton);
   GUI.clickables.add(stepheightButton);
   
+  GUI.clickables.add(exitButton);
+  
   addModeIcons();
 }
 
@@ -180,12 +182,13 @@ void calibrateMenu(int mode) {
          GUI.clickables.add(topZeroButton);
        }
        if(mode == SINGLE_LEG) {
-         Button upButton = new Button(new XY(width/2 , 80), 130, 40, "UP", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, -2)); } }); 
-         Button downButton = new Button(new XY(width/2, 120), 130, 40, "DWN", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, 2)); } }); 
-         Button fwdButton = new Button(new XY(width/2, 160), 130, 40, "FWD", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(-2, 0, 0)); } }); 
-         Button bkwdButton = new Button(new XY(width/2, 200), 130, 40, "BKWD", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(2, 0, 0)); } }); 
-         Button leftButton = new Button(new XY(width/2, 240), 130, 40, "LEFT", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 2, 0)); } }); 
-         Button rightButton = new Button(new XY(width/2, 280), 130, 40, "RIGHT", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, -2, 0)); } }); 
+
+         Button upButton = new Button(new XY(width/2 , 80), 130, 40, "UP", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, -2), true); } }); 
+         Button downButton = new Button(new XY(width/2, 120), 130, 40, "DWN", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, 2), true); } }); 
+         Button fwdButton = new Button(new XY(width/2, 160), 130, 40, "FWD", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(-2, 0, 0), true); } }); 
+         Button bkwdButton = new Button(new XY(width/2, 200), 130, 40, "BKWD", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(2, 0, 0), true); } }); 
+         Button leftButton = new Button(new XY(width/2, 240), 130, 40, "LEFT", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 2, 0), true); } }); 
+         Button rightButton = new Button(new XY(width/2, 280), 130, 40, "RIGHT", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, -2, 0), true); } }); 
          Button centerUpButton = new Button(new XY(width/2, 320), 250, 40, "REST UP", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].targetCenterUp(); } }); 
          Button centerDwnButton = new Button(new XY(width/2, 360), 250, 40, "REST DWN", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].targetCenterDown(); } }); 
          GUI.clickables.add(upButton); 
@@ -273,12 +276,18 @@ void calibrateMenu(int mode) {
   addModeIcons();
 }
 
+void statsMenu() {
+  viewMode = STATS_VIEW;
+  GUI.clearElements();
+  addModeIcons();
+}
+
 void addModeIcons() {
   Button driveButton = new Button(new XY(width-40, 40), "icons/drive.svg", new Action() { void act(float x, float y) { house.calibrate = false; homeMenu(); } });
   Button waypointsButton = new Button(new XY(width-40, 120), "icons/waypoints.svg", new Action() { void act(float x, float y) { house.calibrate = false; waypointMenu(); } });
   Button sunButton = new Button(new XY(width-40, 200), "icons/sun.svg", new Action() { void act(float x, float y) { house.calibrate = false; sunMenu(); } });
   Button viewsButton = new Button(new XY(width-40, 280), "icons/views.svg", new Action() { void act(float x, float y) { } });  
-  Button statsButton = new Button(new XY(width-40, 360), "icons/stats.svg", new Action() { void act(float x, float y) { } });
+  Button statsButton = new Button(new XY(width-40, 360), "icons/stats.svg", new Action() { void act(float x, float y) { statsMenu(); } });
   Button configButton = new Button(new XY(width-40, 440), "icons/config.svg", new Action() { void act(float x, float y) { house.calibrate = false; configMenu(); } });
   
   GUI.clickables.add(driveButton);

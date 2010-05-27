@@ -18,25 +18,32 @@ void serialEvent(Serial p) {
     if(p == controllers[i]) module = i;  
   }
   
-  char command;
-  int actuator;
-  int value;
-  
-  String inString = controllers[module].readString();
-  String[] t = split(inString, "*");
-  if(t.length > 1) inString = t[1]; else inString = "!!!";
-  command = inString.charAt(0);
-
-  if(command == 'P') {
-    actuator = Integer.parseInt(inString.substring(1,2));
-    value = Integer.parseInt(inString.substring(2, inString.length()-1));
+  if(module > -1) {
+    char command;
+    int actuator;
+    int value;
     
-      if(actuator == 0 || actuator == 3) house.modules[module].legs[actuator < 3 ? 0 : 1].frontAct.updateLength(value);
-      if(actuator == 1 || actuator == 4) house.modules[module].legs[actuator < 3 ? 0 : 1].backAct.updateLength(value);
-      if(actuator == 2 || actuator == 5) house.modules[module].legs[actuator < 3 ? 0 : 1].vertAct.updateLength(value);
+    String inString = controllers[module].readString();
+    String[] t = split(inString, "*");
+    if(t.length > 1) inString = t[1]; else inString = "!!!";
+    command = inString.charAt(0);
+  
+    if(command == 'P') {
+      actuator = Integer.parseInt(inString.substring(1,2));
+      value = Integer.parseInt(inString.substring(2, inString.length()-1));
+      
+        if(actuator == 0 || actuator == 3) house.modules[module].legs[actuator < 3 ? 0 : 1].frontAct.updateLength(value);
+        if(actuator == 1 || actuator == 4) house.modules[module].legs[actuator < 3 ? 0 : 1].backAct.updateLength(value);
+        if(actuator == 2 || actuator == 5) house.modules[module].legs[actuator < 3 ? 0 : 1].vertAct.updateLength(value);
+    }
+    else if(command == 'M') {
+     //println("received: " + inString); 
+    }
   }
-  else if(command == 'M') {
-   //println("received: " + inString); 
+  else {
+    arrayCopy(powerHistory, 1, powerHistory, 0, powerHistory.length - 1);
+    String inString = auxBoard.readString();
+    powerHistory[powerHistory.length-1] = Float.parseFloat(inString.substring(0, inString.length()-1));  
   }
 }
 
