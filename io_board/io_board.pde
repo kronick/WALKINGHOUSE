@@ -2,7 +2,7 @@
 #include <Charlieplex.h>
 #include <EEPROM.h>
 
-#define SAVE_EVERY 1000  // Save to EEPROM ever n cycles
+#define SAVE_EVERY 2000  // Save to EEPROM ever n cycles
 
 byte charliePins[] = {8, 12, 13};
 Charlieplex charlieplex = Charlieplex(charliePins,3);
@@ -21,7 +21,7 @@ int indicatorDecay = 0;
 int chip = 0;
 boolean rev = false;
 
-int cycle = 0;
+long cycle = 0;
 
 // Serial communication
 // ====================
@@ -31,7 +31,7 @@ int cycle = 0;
 #define SETCOM 2   // Set actuator position
 #define GETCOM 3   // Get actuator position
 #define CALCOM 4   // Calibrate
-#define LEGCALOCM 5 // Calibrate leg
+#define LEGCALCOM 5 // Calibrate leg
 
 char incoming = 0;    // Place to temporarily store incoming serial byte
 int c_type = -1;      // Stores current command type to process
@@ -155,9 +155,14 @@ void setup()
     
     // Read stored value from EEPROM and set counter
     int stored = int(EEPROM.read(2*i+1)) | (int(EEPROM.read(2*i)) << 8);
-    if(stored == 65535) // This is the default value and obviously invalid, set to 0
+    Serial.println(stored);
+    if(stored == 65535) { // This is the default value and obviously invalid, set to 0
       stored = 0;
+    }
+    stored = 207;
     set_count(i, stored);
+    Serial.print("Counter set to: ");
+    Serial.println(get_count(i));
       
     delay(10);             
     
@@ -233,7 +238,8 @@ void set_count(int counter, int value) {
   // Write to DTR register, then load DTR into CNTR
   digitalWrite(SS[counter], LOW);
   spi_transfer(WRITE_DTR);
-  spi_transfer(value);
+  spi_transfer(int(value) >> 8);
+  spi_transfer(value & B11111111);
   digitalWrite(SS[counter], HIGH); 
   digitalWrite(SS[counter], LOW);
   spi_transfer(LOAD_COUNT);
@@ -382,7 +388,7 @@ void loop()
           target[c_actuator] = 0;    // Set target to 0, too
           Serial.print("*C!");  // Acknowledge this is complete
           break;
-        case LEGCALCOM:
+        /*case LEGCALCOM:
           // NOTE: Calibration halts the control loop
           // This routine calibrates all three actuators of one leg in sequence
           int leg = (c_actuator%2) * 3;
@@ -415,7 +421,7 @@ void loop()
             target[leg + l] = 0;    // Set target to 0, too
           }
           Serial.print("*C!");  // Acknowledge this is complete
-          break;          
+          break;  */        
       }
 
       // Blink the indicator pin
