@@ -1,14 +1,14 @@
-void updatePositions() {
-  for(int i=0; i<3; i++) {
-    String out = "";
-    for(int j=0; j<6; j++) {
-      out = out + "G" + j + "*";
-    }
-    try {
-      controllers[i].write(out);
-    }
-    catch (Exception e) { };
-  }  
+  void updatePositions() {
+    for(int i=0; i<3; i++) {
+      String out = "";
+      for(int j=0; j<6; j++) {
+        out = out + "G" + j + "*";
+      }
+      try {
+        controllers[i].write(out);
+      }
+      catch (Exception e) { };
+    }  
 }
 
 void serialEvent(Serial p) {

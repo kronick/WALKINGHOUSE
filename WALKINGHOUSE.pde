@@ -212,7 +212,8 @@ void draw() {
            house.modules[i].legs[j].moveTarget(new XYZ(0, 0, 0), true);
          }  
        }      
-      
+    }
+    if(!house.simulate) {
       // Send new targets to leg controllers
       for(int i=0; i<house.modules.length; i++) {
           String out = "";
