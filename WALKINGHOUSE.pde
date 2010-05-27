@@ -48,7 +48,7 @@ ScrollEvent mWheel;
 
 PImage bgMap;
 
-boolean turbo = false;
+boolean turbo = true;
 boolean follow = false;
 
 XMLElement config;
