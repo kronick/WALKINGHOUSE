@@ -7,8 +7,14 @@ class House
 
   static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
   static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
-  public float footDownLevel = 55;
-  public float footUpLevel = 35;
+  public float footDownLevel = 57;
+  public float footUpLevel = 45;
+  // Optimal walking:  57-45
+  // Big steps:        57-37
+  // High clearance:   62-42
+  // Low clearance:    40-26
+  
+  
    
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
@@ -372,6 +378,22 @@ class House
         }
       } 
     popMatrix();
+  }
+
+  
+  void highlightLeg(int i, int j) {
+    pushMatrix();
+      translate(this.center.x, this.center.y);
+      rotate(this.angle);
+      translate(modules[i].legs[j].offset.x, modules[i].legs[j].offset.y);
+      //scale(zoom);  // Scale based on zoom factor 
+      rotate(-modules[i].legs[j].rot);
+      
+      float _s = abs((frameCount)%60 - 30)+80;
+      noStroke();
+      fill(0,250,255,80);
+      ellipse(modules[i].legs[j].foot.x, modules[i].legs[j].foot.y, _s, _s);
+    popMatrix();  
   }
   
   PGraphics drawDebug() {

@@ -93,6 +93,8 @@ void sunMenu() {
 }
 
 void configMenu() {
+  viewMode = DRIVE_VIEW;
+  
   GUI.clearElements();
   Button calibrateButton = new Button(new XY(width/2, 150), 300, 50, "CALIBRATE", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(ALL_ACTS); } } ); 
   Button moveLegButton = new Button(new XY(width/2, 200), 300, 50, "MOVE LEG", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(SINGLE_LEG); } } ); 
@@ -111,20 +113,35 @@ void configMenu() {
 }
 
 void stepHeightMenu() {
+    viewMode = STEP_HEIGHT_VIEW;
     GUI.clearElements();
-    Button bigButton = new Button(new XY(width/2 , 80), 230, 40, "BIGGER", new Action() { void act(float x, float y) { house.footUpLevel -= 1; } }); 
-    Button smallButton = new Button(new XY(width/2, 120), 230, 40, "SMALLER", new Action() { void act(float x, float y) { house.footUpLevel += 1; } });  
-     
-    Button highButton = new Button(new XY(width/2 , 180), 230, 40, "HIGHER", new Action() { void act(float x, float y) { house.footUpLevel += .5; house.footDownLevel += .5;} }); 
-    Button lowButton = new Button(new XY(width/2, 220), 230, 40, "LOWER", new Action() { void act(float x, float y) { house.footUpLevel -= .5; house.footDownLevel -= .5; } });  
+
+    Button biggerButton = new Button(new XY((width-80)/4 + 135 , 50), "icons/zoomin.svg", new Action() { void act(float x, float y) { house.footUpLevel -= 2; } }); 
+    Button smallerButton = new Button(new XY((width-80)/4 -135, 50), "icons/zoomout.svg", new Action() { void act(float x, float y) { house.footUpLevel += 2; } }); 
     
-    Button resetButton = new Button(new XY(width/2, 280), 230, 40, "RESET", new Action() { void act(float x, float y) { house.footUpLevel = 35; house.footDownLevel = 55; } });  
+    Button higherButton = new Button(new XY(3*(width-80)/4 + 135, 50), "icons/up.svg", new Action() { void act(float x, float y) { house.footUpLevel += 2; house.footDownLevel += 2;} }); 
+    Button lowerButton = new Button(new XY(3*(width-80)/4 - 135, 50), "icons/down.svg", new Action() { void act(float x, float y) { house.footUpLevel -= 2; house.footDownLevel -= 2; } }); 
+
+    Button smallButton = new Button(new XY((width-80)/4, 30), 230, 40, "SMALL", new Action() { void act(float x, float y) { house.footUpLevel = 45; house.footDownLevel = 57; } });  
+    Button bigButton = new Button(new XY((width-80)/4, 70), 230, 40, "BIG", new Action() { void act(float x, float y) { house.footUpLevel = 37; house.footDownLevel = 57; } });  
+    Button highButton = new Button(new XY(3*(width-80)/4, 30), 230, 40, "HIGH", new Action() { void act(float x, float y) { house.footUpLevel = 42; house.footDownLevel = 61.5; } });  
+    Button lowButton = new Button(new XY(3*(width-80)/4, 70), 230, 40, "LOW", new Action() { void act(float x, float y) { house.footUpLevel = 27; house.footDownLevel = 40; } });  
+    
+    
+    // Optimal walking:  57-45
+    // Big steps:        57-37
+    // High clearance:   62-42
+    // Low clearance:    40-26     
+    GUI.clickables.add(biggerButton);
+    GUI.clickables.add(smallerButton);
+    GUI.clickables.add(higherButton);
+    GUI.clickables.add(lowerButton);
      
     GUI.clickables.add(bigButton);
     GUI.clickables.add(smallButton);
     GUI.clickables.add(highButton);
     GUI.clickables.add(lowButton);
-    GUI.clickables.add(resetButton);
+    //GUI.clickables.add(resetButton);
   
     addModeIcons();
 }
@@ -145,6 +162,8 @@ void calibrateMenu(int mode) {
   house.gaitState = 0;       
   
   if(calibrateMode == SINGLE_ACT || calibrateMode == SINGLE_LEG) {
+     follow = true;
+     zoom = 1;
      Button oneButton  = new Button(new XY(width/2-125, height-25), 50, 50, "1", new Action() { void act(float x, float y) { setConfigLeg(0,0); calibrateMenu(); } } ); 
      Button twoButton   = new Button(new XY(width/2-75, height-25), 50, 50, "2", new Action() { void act(float x, float y) { setConfigLeg(0,1); calibrateMenu(); } } ); 
      Button threeButton   = new Button(new XY(width/2-25, height-25), 50, 50, "3", new Action() { void act(float x, float y) { setConfigLeg(1,0); calibrateMenu(); } } ); 
@@ -183,6 +202,7 @@ void calibrateMenu(int mode) {
          GUI.clickables.add(topZeroButton);
        }
        if(mode == SINGLE_LEG) {
+         viewMode = MOVE_LEG_VIEW;
 
          Button upButton = new Button(new XY(width/2 , 80), 130, 40, "UP", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, -2), true); } }); 
          Button downButton = new Button(new XY(width/2, 120), 130, 40, "DWN", new Action() { void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, 2), true); } }); 
