@@ -51,11 +51,13 @@ class House
   
   public int gaitState;
   public int gaitPhase;
+  private boolean legLimit; // Flag when a leg on the ground can't move any more
+  
   public int stepCount;
   public float distanceWalked = 0;
   public ArrayList breadcrumbs;
   
-  static final float VERTICAL_EPSILON = .1;    // .024
+  static final float VERTICAL_EPSILON = .12;    // .024
   static final float HORIZONTAL_EPSILON = .25; // .125
   static final float ANGULAR_EPSILON = .01;
 
@@ -153,6 +155,7 @@ class House
         }      
         break;
       case 1:  // Move legs up/down. Repeat this state until all legs are up or down.
+        legLimit = false; // Reset this flag once per step
         this.status = "Switching legs up/down...";
         // Copy input commands to current step parameter
         boolean allUp = true;
@@ -209,7 +212,7 @@ class House
         this.status = "Moving house...";
         if(debug) println("Moving legs forward/backward...");
         
-        boolean stop = false;
+        //boolean stop = false;
         boolean stopFloating = false;
         boolean moveOn = true;
         XYZ delta;
@@ -236,11 +239,11 @@ class House
               delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
               delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
               
-              if(stop && isPushingLeg(i, j, gaitPhase))
+              if(legLimit && isPushingLeg(i, j, gaitPhase))
                 delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
               
               if(!(stopFloating && !isPushingLeg(i,j, gaitPhase)) && modules[i].legs[j].moveTarget(delta)) {
-                if(!isPushingLeg(i, j, gaitPhase) || !stop)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
+                if(!isPushingLeg(i, j, gaitPhase) || !legLimit)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
                   moveOn = false;
                  
                  // Move the rotational center by the linear vector
@@ -260,12 +263,13 @@ class House
               }
               else {
                 if(isPushingLeg(i, j, gaitPhase))  // If this leg is on the ground and can't move, stop all the legs that are on the ground
-                  stop = true;
+                  legLimit = true;
                 else
                   stopFloating = true;
                   
-                if(stopFloating && stop) moveOn = true;
+                if(stopFloating && legLimit) moveOn = true;
               }
+              if(debug) println(legLimit);
             }
           }
         }
