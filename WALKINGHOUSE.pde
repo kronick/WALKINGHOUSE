@@ -464,7 +464,7 @@ void draw() {
   // Draw framerate counter and time
   textAlign(RIGHT,CENTER);
   int elapsed = (int)millis() - timerStart;
-  text("T+"+nf(int(elapsed/360000.), 2) + ":" + nf(int(elapsed/60000.), 2) + "." + nf(int(elapsed/1000.), 2), width-90, height-30);
+  text("T+"+nf(int(elapsed/3600000.), 2) + ":" + nf(int(elapsed/60000.)%60, 2) + "." + nf(int(elapsed/1000.)%60, 2), width-90, height-30);
   text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
 
