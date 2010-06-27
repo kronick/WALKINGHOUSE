@@ -4,11 +4,20 @@ class House
   static final int TOP = 0;
   static final int FRONT = 1;
   static final int SIDE = 2;
+  
+  static final int TRIPOD_GAIT = 0;
+  static final int WAVE_GAIT = 1;
 
   static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
   static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
-  public float footDownLevel = 55;
-  public float footUpLevel = 35;
+  public float footDownLevel = 57;
+  public float footUpLevel = 45;
+  // Optimal walking:  57-45
+  // Big steps:        57-37
+  // High clearance:   62-42
+  // Low clearance:    40-26
+  
+  
    
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
@@ -43,15 +52,19 @@ class House
   
   public Module[] modules;
   
+  public int gait = TRIPOD_GAIT;
   public int gaitState;
   public int gaitPhase;
+  private boolean legLimit; // Flag when a leg on the ground can't move any more
+  
   public int stepCount;
   public float distanceWalked = 0;
   public ArrayList breadcrumbs;
   
-  static final float VERTICAL_EPSILON = .1;    // .024
+  static final float VERTICAL_EPSILON = .12;    // .024
   static final float HORIZONTAL_EPSILON = .25; // .125
   static final float ANGULAR_EPSILON = .01;
+
   
   
   public String status = "";
@@ -76,7 +89,7 @@ class House
     this.gaitPhase = -1;
     this.translationVector = new XYZ(0,0,0);
     this.stepVector = new XYZ(0,0,0);
-    this.translationSpeed = 1;
+    this.translationSpeed = 4;
     this.rotation = 0;
     this.rotationCenter = new XYZ(0,0,0);
     
@@ -146,6 +159,7 @@ class House
         }      
         break;
       case 1:  // Move legs up/down. Repeat this state until all legs are up or down.
+        legLimit = false; // Reset this flag once per step
         this.status = "Switching legs up/down...";
         // Copy input commands to current step parameter
         boolean allUp = true;
@@ -202,7 +216,7 @@ class House
         this.status = "Moving house...";
         if(debug) println("Moving legs forward/backward...");
         
-        boolean stop = false;
+        //boolean stop = false;
         boolean stopFloating = false;
         boolean moveOn = true;
         XYZ delta;
@@ -229,11 +243,11 @@ class House
               delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
               delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
               
-              if(stop && isPushingLeg(i, j, gaitPhase))
+              if(legLimit && isPushingLeg(i, j, gaitPhase))
                 delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
               
               if(!(stopFloating && !isPushingLeg(i,j, gaitPhase)) && modules[i].legs[j].moveTarget(delta)) {
-                if(!isPushingLeg(i, j, gaitPhase) || !stop)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
+                if(!isPushingLeg(i, j, gaitPhase) || !legLimit)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
                   moveOn = false;
                  
                  // Move the rotational center by the linear vector
@@ -253,12 +267,13 @@ class House
               }
               else {
                 if(isPushingLeg(i, j, gaitPhase))  // If this leg is on the ground and can't move, stop all the legs that are on the ground
-                  stop = true;
+                  legLimit = true;
                 else
                   stopFloating = true;
                   
-                if(stopFloating && stop) moveOn = true;
+                if(stopFloating && legLimit) moveOn = true;
               }
+              if(debug) println(legLimit);
             }
           }
         }
@@ -371,6 +386,22 @@ class House
         }
       } 
     popMatrix();
+  }
+
+  
+  void highlightLeg(int i, int j) {
+    pushMatrix();
+      translate(this.center.x, this.center.y);
+      rotate(this.angle);
+      translate(modules[i].legs[j].offset.x, modules[i].legs[j].offset.y);
+      //scale(zoom);  // Scale based on zoom factor 
+      rotate(-modules[i].legs[j].rot);
+      
+      float _s = abs((frameCount)%60 - 30)+80;
+      noStroke();
+      fill(0,250,255,80);
+      ellipse(modules[i].legs[j].foot.x, modules[i].legs[j].foot.y, _s, _s);
+    popMatrix();  
   }
   
   PGraphics drawDebug() {

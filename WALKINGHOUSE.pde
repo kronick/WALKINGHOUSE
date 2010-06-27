@@ -1,6 +1,9 @@
 import java.util.Calendar.*;
 import java.util.Date.*;
 
+//import Jama.util.*;
+//import Jama.*;
+
 import processing.serial.*;
 
 float BASE_FRAMERATE = 10;  // Used as a standard to compensate walking speed at other framerates.
@@ -80,7 +83,7 @@ void setup() {
   grey = color(0,0,100);
   black = color(0,0,0);
   
-  boolean simulate = false;
+  boolean simulate = true;
   
   // Initialize serial communications
   // Change the indices if controllers are attached to other ports

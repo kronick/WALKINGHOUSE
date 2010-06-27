@@ -1,6 +1,9 @@
 import java.util.Calendar.*;
 import java.util.Date.*;
 
+import Jama.util.*;
+import Jama.*;
+
 import processing.serial.*;
 
 float BASE_FRAMERATE = 10;  // Used as a standard to compensate walking speed at other framerates.
@@ -13,6 +16,8 @@ static final int SUN_VIEW = 4;
 static final int CALIBRATE_VIEW = 5;
 static final int ACTUATOR_VIEW = 6;
 static final int STATS_VIEW = 7;
+static final int STEP_HEIGHT_VIEW = 8;
+static final int MOVE_LEG_VIEW = 9;
 
 static final int FRAME_RATE = 60;
 static final int FOOT_DIAMETER = 30;
@@ -78,14 +83,16 @@ void setup() {
   grey = color(0,0,100);
   black = color(0,0,0);
   
-  boolean simulate = false;
+  boolean simulate = true;
   
   // Initialize serial communications
   // Change the indices if controllers are attached to other ports
   try {
-    controllers[0] = new Serial(this, Serial.list()[3], 9600);
-    controllers[1] = new Serial(this, Serial.list()[1], 9600);
-    controllers[2] = new Serial(this, Serial.list()[4], 9600);
+    if(!simulate) {
+      controllers[0] = new Serial(this, Serial.list()[3], 9600);
+      controllers[1] = new Serial(this, Serial.list()[1], 9600);
+      controllers[2] = new Serial(this, Serial.list()[4], 9600);
+    }
     
     //auxBoard = new Serial(this, Serial.list()[2], 9600);
   
@@ -212,7 +219,8 @@ void draw() {
            house.modules[i].legs[j].moveTarget(new XYZ(0, 0, 0), true);
          }  
        }      
-      
+    }
+    if(!house.simulate) {
       // Send new targets to leg controllers
       for(int i=0; i<house.modules.length; i++) {
           String out = "";
@@ -277,7 +285,7 @@ void draw() {
   imageMode(CENTER);
   rectMode(CENTER);
 
-  if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW || viewMode == DRIVE_VIEW) {
+  if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW || viewMode == DRIVE_VIEW || viewMode == MOVE_LEG_VIEW) {
     // Draw the house
     // ====================================  
     pushMatrix();
@@ -346,6 +354,11 @@ void draw() {
     }
 
     house.draw(House.TOP, 1);
+
+    if(viewMode == MOVE_LEG_VIEW) {
+      // Draw circle around selected leg
+      house.highlightLeg(configLegi, configLegj);  
+    }
 
     // Draw concentric circles around the house
     if(debug) {
@@ -454,7 +467,7 @@ void draw() {
   // Draw framerate counter and time
   textAlign(RIGHT,CENTER);
   int elapsed = (int)millis() - timerStart;
-  text("T+"+nf(int(elapsed/360000.), 2) + ":" + nf(int(elapsed/60000.), 2) + "." + nf(int(elapsed/1000.), 2), width-90, height-30);
+  text("T+"+nf(int(elapsed/3600000.), 2) + ":" + nf(int(elapsed/60000.)%60, 2) + "." + nf(int(elapsed/1000.)%60, 2), width-90, height-30);
   text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
 
@@ -501,6 +514,52 @@ void draw() {
         }
         catch(ClassCastException e) { break; }
     }    
+  }
+  
+  if(viewMode == STEP_HEIGHT_VIEW) {
+    pushMatrix();
+      // Draw ground plane
+      translate(width/2, height-50);
+      noStroke();
+      fill(0,0,255,80);
+      rectMode(CORNERS);
+      rect(-width/2,0, width/2, 50);
+      stroke(0,0,255);
+      line(-width/2, 0, width/2, 0);
+      
+      pushMatrix();
+      scale(2.5*60./MODULE_WIDTH);
+      translate(0, -house.footDownLevel);
+        // Draw height bars
+        noStroke();
+        fill(80,150,150,200);
+        rect(-MODULE_WIDTH-15, 0, -MODULE_WIDTH+15, house.footDownLevel); 
+        rect(MODULE_WIDTH-15, 0, MODULE_WIDTH+15, house.footDownLevel); 
+        fill(0,150,150,200);
+        rect(-15, 0, +15, house.footUpLevel); 
+        
+        // Draw house body
+        float _h = MODULE_WIDTH*sqrt(3);
+        fill(0,0,0);
+        stroke(0,0,255);
+        strokeWeight(3);
+        rect(-MODULE_WIDTH/2*3, 0, MODULE_WIDTH/2*3, -_h);
+        strokeWeight(1);
+        line(-MODULE_WIDTH/2*3, -_h/2, MODULE_WIDTH/2*3, -_h/2);
+        line(-MODULE_WIDTH/2, 0, -MODULE_WIDTH/2, -_h);
+        line(MODULE_WIDTH/2, 0, MODULE_WIDTH/2, -_h);    
+        
+        // Draw feet heights
+        fill(40,250, 255);
+        noStroke();
+        rectMode(CENTER);
+        rect(-MODULE_WIDTH, house.footDownLevel - 5, 50, 10);
+        rect(0, house.footUpLevel - 5, 50, 10);
+        rect(MODULE_WIDTH, house.footDownLevel - 5, 50, 10);
+      popMatrix();
+    
+    // 25- 65
+    popMatrix();  
   }
   
   if(viewMode == STATS_VIEW) {

@@ -12,6 +12,26 @@ boolean isPushingLeg(int i, int j, int phase) {
   }
 }
 
+int[] nextWaveLeg(int n) {
+  int[] o = new int[2];
+  switch(n) {
+    case 1: o[0] = 1; o[1] = 1; break;
+    case 4: o[0] = 1; o[1] = 0; break;
+    case 3: o[0] = 2; o[1] = 1; break;
+    case 6: o[0] = 0; o[1] = 1; break;
+    case 2: o[0] = 2; o[1] = 0; break;
+    case 5: o[0] = 0; o[1] = 0; break;
+  }   
+  return o;
+}
+
+int[] getLegij(int n) {
+  int[] o = new int[2];
+  o[0] = (int)((n-1)/2);
+  o[1] = n%2 == 1 ? 0 : 1;
+  return o;  
+}
+
 XYZ screenToWorldCoords(float x, float y) {
   XYZ temp = new XYZ(x, y, 0);
   temp.x = (x-width/2)/zoom;

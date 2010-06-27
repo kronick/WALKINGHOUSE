@@ -4,6 +4,9 @@ class House
   static final int TOP = 0;
   static final int FRONT = 1;
   static final int SIDE = 2;
+  
+  static final int TRIPOD_GAIT = 0;
+  static final int WAVE_GAIT = 1;
 
   static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
   static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
@@ -49,6 +52,7 @@ class House
   
   public Module[] modules;
   
+  public int gait = TRIPOD_GAIT;
   public int gaitState;
   public int gaitPhase;
   private boolean legLimit; // Flag when a leg on the ground can't move any more
@@ -145,145 +149,305 @@ class House
     stepVector = new XYZ(translationVector);  
     stepRotation = rotation * frameRateFactor();
     
-    switch(gaitState) {
-      case 0:  // Stop everything!
-        this.status = "House at rest.";
-        for(int i=0; i<this.modules.length; i++) {
-          for(int j=0; j<this.modules[i].legs.length; j++) {
-            //modules[i].legs[j].setTarget(modules[i].legs[j].target);
-          }
-        }      
-        break;
-      case 1:  // Move legs up/down. Repeat this state until all legs are up or down.
-        legLimit = false; // Reset this flag once per step
-        this.status = "Switching legs up/down...";
-        // Copy input commands to current step parameter
-        boolean allUp = true;
-        boolean allDown = true;
-        if(debug) println("Moving legs up/down...");
-        for(int i=0; i<this.modules.length; i++) {
-          for(int j=0; j<this.modules[i].legs.length; j++) {
-            if(isPushingLeg(i, j, gaitPhase)){              
-              if(modules[i].legs[j].foot.z < footDownLevel) {  // Down (ground) is in the +z direction
-                if(modules[i].legs[j].target.z <= footDownLevel+3) {
-                  XYZ move = new XYZ(0,0,VERTICAL_EPSILON);
-                  move.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
-                  if(!modules[i].legs[j].moveTarget(move)) {
-                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footDownLevel+1), true);
-                  }
-                  //allDown = false;
-                }
-                allDown = false;
-              }
-            }
-            else {
-              // Reset center of rotation
-              modules[i].legs[j].toCenter = new XYZ(modules[i].legs[j].offset);              
-              if(modules[i].legs[j].foot.z > footUpLevel) {  // Up is in the -z direction
-                if(modules[i].legs[j].target.z >= footUpLevel-3) {
-                  XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
-                  move.scale(frameRateFactor());
-                  if(!modules[i].legs[j].moveTarget(move)) {
-                    modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footUpLevel-3), true);
-                  }
-                  //allUp = false;
-                }
-                allUp = false;
-              }              
-            }          
-          }
-        }
-        if(allUp && allDown) {
-          // Set new targets for legs that are up
+    if(gait == TRIPOD_GAIT) {
+      switch(gaitState) {
+        case 0:  // Stop everything!
+          this.status = "House at rest.";
           for(int i=0; i<this.modules.length; i++) {
             for(int j=0; j<this.modules[i].legs.length; j++) {
-              int sign = j==1 ? 1 : -1;          
-              if(!isPushingLeg(i, j, gaitPhase)){
-                // Begin with target in the center of the leg's range of motion
-                modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, footUpLevel-3));
+              //modules[i].legs[j].setTarget(modules[i].legs[j].target);
+            }
+          }      
+          break;
+        case 1:  // Move legs up/down. Repeat this state until all legs are up or down.
+          legLimit = false; // Reset this flag once per step
+          this.status = "Switching legs up/down...";
+          // Copy input commands to current step parameter
+          boolean allUp = true;
+          boolean allDown = true;
+          if(debug) println("Moving legs up/down...");
+          for(int i=0; i<this.modules.length; i++) {
+            for(int j=0; j<this.modules[i].legs.length; j++) {
+              if(isPushingLeg(i, j, gaitPhase)){              
+                if(modules[i].legs[j].foot.z < footDownLevel) {  // Down (ground) is in the +z direction
+                  if(modules[i].legs[j].target.z <= footDownLevel+3) {
+                    XYZ move = new XYZ(0,0,VERTICAL_EPSILON);
+                    move.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+                    if(!modules[i].legs[j].moveTarget(move)) {
+                      modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footDownLevel+1), true);
+                    }
+                    //allDown = false;
+                  }
+                  allDown = false;
+                }
+              }
+              else {
+                // Reset center of rotation
+                modules[i].legs[j].toCenter = new XYZ(modules[i].legs[j].offset);              
+                if(modules[i].legs[j].foot.z > footUpLevel) {  // Up is in the -z direction
+                  if(modules[i].legs[j].target.z >= footUpLevel-3) {
+                    XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
+                    move.scale(frameRateFactor());
+                    if(!modules[i].legs[j].moveTarget(move)) {
+                      modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footUpLevel-3), true);
+                    }
+                    //allUp = false;
+                  }
+                  allUp = false;
+                }              
               }          
             }
           }
-          // Pass on to the next state
-          gaitState = 2;
-        }
-        break;
-      case 2:  // Move legs forward/backwards
-        this.status = "Moving house...";
-        if(debug) println("Moving legs forward/backward...");
-        
-        //boolean stop = false;
-        boolean stopFloating = false;
-        boolean moveOn = true;
-        XYZ delta;
-        XYZ angular, orig;
-
-        for(int i=0; i<this.modules.length; i++) {
-          for(int j=0; j<this.modules[i].legs.length; j++) {
-            int sign = j==1 ? 1 : -1;
-            
-            if(isPushingLeg(i, j, gaitPhase) || true){
-              //delta = new XYZ(this.stepVector.x * -1 *sign, this.stepVector.y * -1 * sign, this.stepVector.z);
-              delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
+          if(allUp && allDown) {
+            // Set new targets for legs that are up
+            for(int i=0; i<this.modules.length; i++) {
+              for(int j=0; j<this.modules[i].legs.length; j++) {
+                int sign = j==1 ? 1 : -1;          
+                if(!isPushingLeg(i, j, gaitPhase)){
+                  // Begin with target in the center of the leg's range of motion
+                  modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].middlePosition.x, modules[i].legs[j].middlePosition.y, footUpLevel-3));
+                }          
+              }
+            }
+            // Pass on to the next state
+            gaitState = 2;
+          }
+          break;
+        case 2:  // Move legs forward/backwards
+          this.status = "Moving house...";
+          if(debug) println("Moving legs forward/backward...");
+          
+          //boolean stop = false;
+          boolean stopFloating = false;
+          boolean moveOn = true;
+          XYZ delta;
+          XYZ angular, orig;
+  
+          for(int i=0; i<this.modules.length; i++) {
+            for(int j=0; j<this.modules[i].legs.length; j++) {
+              int sign = j==1 ? 1 : -1;
               
-              orig = new XYZ(modules[i].legs[j].target);
-              orig.rotate(modules[i].legs[j].rot);
-              orig.translate(modules[i].legs[j].toCenter); // Vector from center of house to the test point
-              angular = new XYZ(orig);
-              angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
-              angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
-              
-              delta.translate(angular);              
-              float factor = delta.length();
-              //delta.normalize();
-              delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
-              delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
-              
-              if(legLimit && isPushingLeg(i, j, gaitPhase))
-                delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
-              
-              if(!(stopFloating && !isPushingLeg(i,j, gaitPhase)) && modules[i].legs[j].moveTarget(delta)) {
-                if(!isPushingLeg(i, j, gaitPhase) || !legLimit)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
-                  moveOn = false;
-                 
-                 // Move the rotational center by the linear vector
-                 factor = delta.length()/factor;  // Figure out how much the linear and rotational vectors were reduced by
-                 XYZ linChange = new XYZ(factor*this.stepVector.x, factor*this.stepVector.y, factor*this.stepVector.z);
-                 //linChange.rotate(modules[i].legs[j].rot);
-                 linChange.scale(isPushingLeg(i,j,gaitPhase) ? -1 : 1);                 
-                 modules[i].legs[j].toCenter.translate(linChange);
-                 
-                 if(isPushingLeg(i,j, gaitPhase)) {
-                   linChange.rotate(-this.angle);
-                   linChange.scale(1./this.modules.length);
+              if(isPushingLeg(i, j, gaitPhase) || true){
+                //delta = new XYZ(this.stepVector.x * -1 *sign, this.stepVector.y * -1 * sign, this.stepVector.z);
+                delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
+                
+                orig = new XYZ(modules[i].legs[j].target);
+                orig.rotate(modules[i].legs[j].rot);
+                orig.translate(modules[i].legs[j].toCenter); // Vector from center of house to the test point
+                angular = new XYZ(orig);
+                angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
+                angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
+                
+                delta.translate(angular);              
+                float factor = delta.length();
+                //delta.normalize();
+                delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
+                delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+                
+                if(legLimit && isPushingLeg(i, j, gaitPhase))
+                  delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
+                
+                if(!(stopFloating && !isPushingLeg(i,j, gaitPhase)) && modules[i].legs[j].moveTarget(delta)) {
+                  if(!isPushingLeg(i, j, gaitPhase) || !legLimit)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
+                    moveOn = false;
                    
-                   this.translated.translate(linChange);
-                   this.rotated += factor * stepRotation * ANGULAR_EPSILON / this.modules.length;
-                 }
+                   // Move the rotational center by the linear vector
+                   factor = delta.length()/factor;  // Figure out how much the linear and rotational vectors were reduced by
+                   XYZ linChange = new XYZ(factor*this.stepVector.x, factor*this.stepVector.y, factor*this.stepVector.z);
+                   //linChange.rotate(modules[i].legs[j].rot);
+                   linChange.scale(isPushingLeg(i,j,gaitPhase) ? -1 : 1);                 
+                   modules[i].legs[j].toCenter.translate(linChange);
+                   
+                   if(isPushingLeg(i,j, gaitPhase)) {
+                     linChange.rotate(-this.angle);
+                     linChange.scale(1./this.modules.length);
+                     
+                     this.translated.translate(linChange);
+                     this.rotated += factor * stepRotation * ANGULAR_EPSILON / this.modules.length;
+                   }
+                }
+                else {
+                  if(isPushingLeg(i, j, gaitPhase))  // If this leg is on the ground and can't move, stop all the legs that are on the ground
+                    legLimit = true;
+                  else
+                    stopFloating = true;
+                    
+                  if(stopFloating && legLimit) moveOn = true;
+                }
+                if(debug) println(legLimit);
               }
-              else {
-                if(isPushingLeg(i, j, gaitPhase))  // If this leg is on the ground and can't move, stop all the legs that are on the ground
-                  legLimit = true;
-                else
-                  stopFloating = true;
-                  
-                if(stopFloating && legLimit) moveOn = true;
-              }
-              if(debug) println(legLimit);
             }
           }
-        }
-        if(moveOn) {
+          if(moveOn) {
+  
+            gaitState = 3;
+          }
+          break;
+        case 3:
+          if(debug) println("Switching phase to start again...");
+          gaitPhase *= -1; // Invert phase to switch legs
+          gaitState = 1;  
+          stepCount++;
+          break;
+      }
+    }
+    else if(gait == WAVE_GAIT) {
+      switch(gaitState) {
+        case 0:
+          this.status = "House at rest.";
+          for(int i=0; i<this.modules.length; i++) {
+            for(int j=0; j<this.modules[i].legs.length; j++) {
+              //modules[i].legs[j].setTarget(modules[i].legs[j].target);
+            }
+          }      
+          break;
+        case 1: case 2: case 3: case 4: case 5: case 6:
+          boolean nextUp = true;
+          boolean currentForward = false;
+          // Move gaitState leg forward, next leg up, remaining legs backward (if possible)
+          int ii = getLegij(gaitState)[0];
+          int jj = getLegij(gaitState)[1];
+          
+          // Find out if any legs on the ground can't move
+          boolean legOnGroundStop = false;
+          XYZ delta;
+          XYZ angular, orig;          
+          for(int i=0; i<this.modules.length; i++) {
+            for(int j=0; j<this.modules[i].legs.length; j++) {
+              // If this is the next leg to go forwards, lift it up some
+              if(nextWaveLeg(gaitState)[0] == i && nextWaveLeg(gaitState)[1] == j) {
+                if(modules[i].legs[j].foot.z > footUpLevel) {  // Up is in the -z direction
+                  if(modules[i].legs[j].target.z >= footUpLevel-3) {
+                    XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
+                    move.scale(frameRateFactor());
+                    if(!modules[i].legs[j].moveTarget(move)) {
+                      modules[i].legs[j].setTarget(new XYZ(modules[i].legs[j].target.x,modules[i].legs[j].target.y,footUpLevel-3), true);
+                    }
+                  }
+                  nextUp = false;
+                }                  
+              }              
+              if(modules[i].legs[j].foot.z >= footUpLevel) {                
+                delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
+                
+                orig = new XYZ(modules[i].legs[j].target);
+                orig.rotate(modules[i].legs[j].rot);
+                orig.translate(modules[i].legs[j].toCenter); // Vector from center of house to the test point
+                angular = new XYZ(orig);
+                angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
+                angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
+                
+                delta.translate(angular);              
+                delta.scale(HORIZONTAL_EPSILON);
+                delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+                delta.scale(1. / (this.modules.length * 2 - 1));  // Slow down by the size of the house
+                
+                if(!modules[i].legs[j].possible(new XYZ(modules[i].legs[j].target.x + delta.x,modules[i].legs[j].target.y + delta.y, modules[i].legs[j].target.z + delta.z)) ||
+                   !modules[i].legs[j].possible(new XYZ(modules[i].legs[j].target.x + delta.x,modules[i].legs[j].target.y + delta.y, footUpLevel)) ||
+                   !modules[i].legs[j].possible(new XYZ(modules[i].legs[j].target.x + delta.x,modules[i].legs[j].target.y + delta.y, footDownLevel)))
+                  legOnGroundStop = true;
+              }
+            }     
+          }
+          if(!legOnGroundStop) {  // Move legs that are on (or lifting from) the ground backwards
+            //println("moving backwards" + frameCount);
+            for(int i=0; i<this.modules.length; i++) {
+              for(int j=0; j<this.modules[i].legs.length; j++) {
+                if(!(i == ii && j == jj)) {
+                  delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
+                  
+                  orig = new XYZ(modules[i].legs[j].target);
+                  orig.rotate(modules[i].legs[j].rot);
+                  orig.translate(modules[i].legs[j].toCenter); // Vector from center of house to the test point
+                  angular = new XYZ(orig);
+                  angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
+                  angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
+                  
+                  delta.translate(angular);              
+                  float factor = delta.length();
+                  delta.scale(HORIZONTAL_EPSILON);
+                  delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+                  delta.scale(1. / (this.modules.length * 2 - 1));  // Slow down by the size of the house
+                  
+                  modules[i].legs[j].moveTarget(delta);  // Whether or not this was possible should have been checked in the previous step
+                  
+                  // Move the rotational center by the linear vector
+                  factor = delta.length()/factor;  // Figure out how much the linear and rotational vectors were reduced by
+                  XYZ linChange = new XYZ(factor*this.stepVector.x, factor*this.stepVector.y, factor*this.stepVector.z);
+                  linChange.scale(-1);                 
+                  modules[i].legs[j].toCenter.translate(linChange); 
+                                     
+                  linChange.rotate(-this.angle);
+                  linChange.scale(1./(this.modules.length * 2 - 1));
+                 
+                  this.translated.translate(linChange);
+                  this.rotated += factor * stepRotation * ANGULAR_EPSILON / (this.modules.length * 2 - 1);
+              
+                }
+              }     
+            }            
+          }
 
-          gaitState = 3;
-        }
-        break;
-      case 3:
-        if(debug) println("Switching phase to start again...");
-        gaitPhase *= -1; // Invert phase to switch legs
-        gaitState = 1;  
-        stepCount++;
-        break;
+          // Try to move current leg forward if it's up          
+          if(modules[ii].legs[jj].foot.z > footUpLevel) {  // Up is in the -z direction
+              if(modules[ii].legs[jj].target.z >= footUpLevel-3) {
+                XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
+                move.scale(frameRateFactor());
+                if(!modules[ii].legs[jj].moveTarget(move)) {
+                  modules[ii].legs[jj].setTarget(new XYZ(modules[ii].legs[jj].target.x,modules[ii].legs[jj].target.y,footUpLevel-3), true);
+                }
+              }
+          }
+          else {  
+            delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
+            
+            orig = new XYZ(modules[ii].legs[jj].target);
+            orig.rotate(modules[ii].legs[jj].rot);
+            orig.translate(modules[ii].legs[jj].toCenter); // Vector from center of house to the test point
+            angular = new XYZ(orig);
+            angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
+            angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
+            
+            delta.translate(angular);              
+            float factor = delta.length();
+            delta.scale(-HORIZONTAL_EPSILON);
+            delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+            
+            if(!modules[ii].legs[jj].moveTarget(delta)) {
+              currentForward = true;  
+            }
+          }
+          // If current gaitState leg is forward and next gaitState leg is up, move to the next phase
+          if(nextUp && currentForward) {
+            // Set target for current leg to go on ground
+            modules[ii].legs[jj].setTarget(new XYZ(modules[ii].legs[jj].target.x,modules[ii].legs[jj].target.y,footDownLevel+1), true);
+            
+            switch(gaitState) {
+              case 1: gaitState = 4; break;
+              case 4: gaitState = 3; break;
+              case 3: gaitState = 6; break;
+              case 6: gaitState = 2; break;
+              case 2: gaitState = 5; break;
+              case 5: gaitState = 1;
+                      breadcrumbs.add(new XYZ(this.center.x, this.center.y, this.center.z));
+                      break;
+              //143625
+            }
+            // Set center target for new leg  
+            int ni = getLegij(gaitState)[0];
+            int nj = getLegij(gaitState)[1];
+            modules[ni].legs[nj].setTarget(new XYZ(modules[ni].legs[nj].middlePosition.x, modules[ni].legs[nj].middlePosition.y, footUpLevel-3));                          
+         
+            // Reset all centers of rotation
+            for(int i=0; i<modules.length; i++) {
+              for(int j=0; j<modules[i].legs.length; j++) {
+                modules[i].legs[j].toCenter = new XYZ(modules[i].legs[j].offset);         
+              }
+            }
+          }
+          //println(nextUp + ", " + currentForward);
+          break;
+      } 
     }
         
     for(int i=0; i<this.modules.length; i++) {
@@ -302,7 +466,7 @@ class House
     //println(this.stepVector.text());
     distanceWalked += this.translated.length();
     
-    if(gaitState == 3) breadcrumbs.add(new XYZ(this.center.x, this.center.y, this.center.z));
+    if(gaitState == 3 && gait == TRIPOD_GAIT) breadcrumbs.add(new XYZ(this.center.x, this.center.y, this.center.z));
   }
   
   void updateLegsOnly() {

@@ -3,6 +3,8 @@ import processing.xml.*;
 
 import java.util.Calendar.*; 
 import java.util.Date.*; 
+import Jama.util.*; 
+import Jama.*; 
 import processing.serial.*; 
 
 import java.applet.*; 
@@ -23,6 +25,9 @@ public class WALKINGHOUSE extends PApplet {
 
 
 
+
+
+
 float BASE_FRAMERATE = 10;  // Used as a standard to compensate walking speed at other framerates.
 
 // Viewmode constants
@@ -33,6 +38,8 @@ static final int SUN_VIEW = 4;
 static final int CALIBRATE_VIEW = 5;
 static final int ACTUATOR_VIEW = 6;
 static final int STATS_VIEW = 7;
+static final int STEP_HEIGHT_VIEW = 8;
+static final int MOVE_LEG_VIEW = 9;
 
 static final int FRAME_RATE = 60;
 static final int FOOT_DIAMETER = 30;
@@ -98,14 +105,16 @@ public void setup() {
   grey = color(0,0,100);
   black = color(0,0,0);
   
-  boolean simulate = false;
+  boolean simulate = true;
   
   // Initialize serial communications
   // Change the indices if controllers are attached to other ports
   try {
-    controllers[0] = new Serial(this, Serial.list()[3], 9600);
-    controllers[1] = new Serial(this, Serial.list()[1], 9600);
-    controllers[2] = new Serial(this, Serial.list()[4], 9600);
+    if(!simulate) {
+      controllers[0] = new Serial(this, Serial.list()[3], 9600);
+      controllers[1] = new Serial(this, Serial.list()[1], 9600);
+      controllers[2] = new Serial(this, Serial.list()[4], 9600);
+    }
     
     //auxBoard = new Serial(this, Serial.list()[2], 9600);
   
@@ -232,7 +241,8 @@ public void draw() {
            house.modules[i].legs[j].moveTarget(new XYZ(0, 0, 0), true);
          }  
        }      
-      
+    }
+    if(!house.simulate) {
       // Send new targets to leg controllers
       for(int i=0; i<house.modules.length; i++) {
           String out = "";
@@ -297,7 +307,7 @@ public void draw() {
   imageMode(CENTER);
   rectMode(CENTER);
 
-  if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW || viewMode == DRIVE_VIEW) {
+  if(viewMode == MAP_VIEW || viewMode == ROUTE_VIEW || viewMode == DRIVE_VIEW || viewMode == MOVE_LEG_VIEW) {
     // Draw the house
     // ====================================  
     pushMatrix();
@@ -366,6 +376,11 @@ public void draw() {
     }
 
     house.draw(House.TOP, 1);
+
+    if(viewMode == MOVE_LEG_VIEW) {
+      // Draw circle around selected leg
+      house.highlightLeg(configLegi, configLegj);  
+    }
 
     // Draw concentric circles around the house
     if(debug) {
@@ -474,7 +489,7 @@ public void draw() {
   // Draw framerate counter and time
   textAlign(RIGHT,CENTER);
   int elapsed = (int)millis() - timerStart;
-  text("T+"+nf(PApplet.parseInt(elapsed/360000.f), 2) + ":" + nf(PApplet.parseInt(elapsed/60000.f), 2) + "." + nf(PApplet.parseInt(elapsed/1000.f), 2), width-90, height-30);
+  text("T+"+nf(PApplet.parseInt(elapsed/3600000.f), 2) + ":" + nf(PApplet.parseInt(elapsed/60000.f)%60, 2) + "." + nf(PApplet.parseInt(elapsed/1000.f)%60, 2), width-90, height-30);
   text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
 
@@ -521,6 +536,52 @@ public void draw() {
         }
         catch(ClassCastException e) { break; }
     }    
+  }
+  
+  if(viewMode == STEP_HEIGHT_VIEW) {
+    pushMatrix();
+      // Draw ground plane
+      translate(width/2, height-50);
+      noStroke();
+      fill(0,0,255,80);
+      rectMode(CORNERS);
+      rect(-width/2,0, width/2, 50);
+      stroke(0,0,255);
+      line(-width/2, 0, width/2, 0);
+      
+      pushMatrix();
+      scale(2.5f*60.f/MODULE_WIDTH);
+      translate(0, -house.footDownLevel);
+        // Draw height bars
+        noStroke();
+        fill(80,150,150,200);
+        rect(-MODULE_WIDTH-15, 0, -MODULE_WIDTH+15, house.footDownLevel); 
+        rect(MODULE_WIDTH-15, 0, MODULE_WIDTH+15, house.footDownLevel); 
+        fill(0,150,150,200);
+        rect(-15, 0, +15, house.footUpLevel); 
+        
+        // Draw house body
+        float _h = MODULE_WIDTH*sqrt(3);
+        fill(0,0,0);
+        stroke(0,0,255);
+        strokeWeight(3);
+        rect(-MODULE_WIDTH/2*3, 0, MODULE_WIDTH/2*3, -_h);
+        strokeWeight(1);
+        line(-MODULE_WIDTH/2*3, -_h/2, MODULE_WIDTH/2*3, -_h/2);
+        line(-MODULE_WIDTH/2, 0, -MODULE_WIDTH/2, -_h);
+        line(MODULE_WIDTH/2, 0, MODULE_WIDTH/2, -_h);    
+        
+        // Draw feet heights
+        fill(40,250, 255);
+        noStroke();
+        rectMode(CENTER);
+        rect(-MODULE_WIDTH, house.footDownLevel - 5, 50, 10);
+        rect(0, house.footUpLevel - 5, 50, 10);
+        rect(MODULE_WIDTH, house.footDownLevel - 5, 50, 10);
+      popMatrix();
+    
+    // 25- 65
+    popMatrix();  
   }
   
   if(viewMode == STATS_VIEW) {
@@ -1304,11 +1365,20 @@ class House
   static final int TOP = 0;
   static final int FRONT = 1;
   static final int SIDE = 2;
+  
+  static final int TRIPOD_GAIT = 0;
+  static final int WAVE_GAIT = 1;
 
   static final float FOOT_DOWN_LEVEL = 55 * MODULE_LENGTH/124;    // Height to walk above ground.
   static final float FOOT_UP_LEVEL = 35 * MODULE_LENGTH/124;      // 55- 46 
-  public float footDownLevel = 55;
-  public float footUpLevel = 35;
+  public float footDownLevel = 57;
+  public float footUpLevel = 45;
+  // Optimal walking:  57-45
+  // Big steps:        57-37
+  // High clearance:   62-42
+  // Low clearance:    40-26
+  
+  
    
   static final int MANUAL_NAV = 0;
   static final int WAYPOINT_NAV = 1;
@@ -1343,15 +1413,19 @@ class House
   
   public Module[] modules;
   
+  public int gait = TRIPOD_GAIT;
   public int gaitState;
   public int gaitPhase;
+  private boolean legLimit; // Flag when a leg on the ground can't move any more
+  
   public int stepCount;
   public float distanceWalked = 0;
   public ArrayList breadcrumbs;
   
-  static final float VERTICAL_EPSILON = .1f;    // .024
+  static final float VERTICAL_EPSILON = .12f;    // .024
   static final float HORIZONTAL_EPSILON = .25f; // .125
   static final float ANGULAR_EPSILON = .01f;
+
   
   
   public String status = "";
@@ -1376,7 +1450,7 @@ class House
     this.gaitPhase = -1;
     this.translationVector = new XYZ(0,0,0);
     this.stepVector = new XYZ(0,0,0);
-    this.translationSpeed = 1;
+    this.translationSpeed = 4;
     this.rotation = 0;
     this.rotationCenter = new XYZ(0,0,0);
     
@@ -1446,6 +1520,7 @@ class House
         }      
         break;
       case 1:  // Move legs up/down. Repeat this state until all legs are up or down.
+        legLimit = false; // Reset this flag once per step
         this.status = "Switching legs up/down...";
         // Copy input commands to current step parameter
         boolean allUp = true;
@@ -1502,7 +1577,7 @@ class House
         this.status = "Moving house...";
         if(debug) println("Moving legs forward/backward...");
         
-        boolean stop = false;
+        //boolean stop = false;
         boolean stopFloating = false;
         boolean moveOn = true;
         XYZ delta;
@@ -1529,11 +1604,11 @@ class House
               delta.scale(isPushingLeg(i, j, gaitPhase) ? HORIZONTAL_EPSILON : -HORIZONTAL_EPSILON);
               delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
               
-              if(stop && isPushingLeg(i, j, gaitPhase))
+              if(legLimit && isPushingLeg(i, j, gaitPhase))
                 delta.scale(0);  // If this leg is on the ground and one can't move, don't move this one either
               
               if(!(stopFloating && !isPushingLeg(i,j, gaitPhase)) && modules[i].legs[j].moveTarget(delta)) {
-                if(!isPushingLeg(i, j, gaitPhase) || !stop)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
+                if(!isPushingLeg(i, j, gaitPhase) || !legLimit)  // If this leg isn't on the ground and can still move or the legs on the ground are not stopped, don't go to the next state yet!
                   moveOn = false;
                  
                  // Move the rotational center by the linear vector
@@ -1553,12 +1628,13 @@ class House
               }
               else {
                 if(isPushingLeg(i, j, gaitPhase))  // If this leg is on the ground and can't move, stop all the legs that are on the ground
-                  stop = true;
+                  legLimit = true;
                 else
                   stopFloating = true;
                   
-                if(stopFloating && stop) moveOn = true;
+                if(stopFloating && legLimit) moveOn = true;
               }
+              if(debug) println(legLimit);
             }
           }
         }
@@ -1671,6 +1747,22 @@ class House
         }
       } 
     popMatrix();
+  }
+
+  
+  public void highlightLeg(int i, int j) {
+    pushMatrix();
+      translate(this.center.x, this.center.y);
+      rotate(this.angle);
+      translate(modules[i].legs[j].offset.x, modules[i].legs[j].offset.y);
+      //scale(zoom);  // Scale based on zoom factor 
+      rotate(-modules[i].legs[j].rot);
+      
+      float _s = abs((frameCount)%60 - 30)+80;
+      noStroke();
+      fill(0,250,255,80);
+      ellipse(modules[i].legs[j].foot.x, modules[i].legs[j].foot.y, _s, _s);
+    popMatrix();  
   }
   
   public PGraphics drawDebug() {
@@ -2972,6 +3064,87 @@ public class SunAngle {
   }  
 }
 
+class Kalman
+{
+  private Matrix K;                    // K, the Kalman gain
+  
+  public Matrix state;                 // x
+  public Matrix covariance;            // P
+  
+  private Matrix predictedState;          // x-
+  private Matrix predictedCovariance;     // P-
+  private Matrix residual;              // y = z - H(x-)
+  private Matrix residualCovariance;   // S
+  
+  public Matrix controlModel;          // B
+  public Matrix controlInput;          // u
+  public Matrix processCovariance;     // Q
+  public Matrix dynamicsModel;         // F
+
+  public Matrix measurement;           // z  
+  public Matrix measurementCovariance; // R
+  public Matrix measurementTransform;  // H, relates state to measurement
+  
+  private int m;                       // Dimension of state vector
+  
+  Kalman(Matrix initialState, Matrix initialCovariance, Matrix dynamicsModel, Matrix controlModel, Matrix measurementTransform) {
+    this.state = initialState;
+    this.covariance = initialCovariance;
+    this.dynamicsModel = dynamicsModel;
+    this.controlModel = controlModel;
+    this.measurementTransform = measurementTransform;
+    // TODO: Make sure the dimensions are compatible amongst these matrices
+    
+    // Initialize things that will get set internally or later
+    this.predictedState = (Matrix)this.state.clone();
+    this.predictedCovariance = (Matrix)this.covariance.clone();    
+    
+    this.m = this.state.getRowDimension();
+    this.residual = new Matrix(m, 1);
+    this.residualCovariance = new Matrix(m, m);
+    
+    this.controlInput = new Matrix(m, 1);
+    this.processCovariance = new Matrix(m, m);
+    
+    this.measurement = new Matrix(m, 1);
+    this.measurementCovariance = new Matrix(m, m);  
+  }
+  
+  public void step(Matrix lastControlInput, Matrix newMeasurement) {
+    this.step(lastControlInput, this.processCovariance, newMeasurement, this.measurementCovariance);  
+  }
+  
+  public void step(Matrix lastControlInput, Matrix newProcessCovariance, Matrix newMeasurement, Matrix newMeasurementCovariance) {
+    this.measurementCovariance = newMeasurementCovariance;
+    this.processCovariance = newProcessCovariance;
+    // "PREDICT" phase
+    predictedState = dynamicsModel.times(state).plus(controlModel.times(lastControlInput));  // x- = A*x + B*u
+    predictedCovariance = dynamicsModel.times(covariance).times(dynamicsModel.transpose()).plus(processCovariance);  // P- = A*P*A^T + Q
+    
+    // "CORRECT" phase
+    residual = newMeasurement.minus(measurementTransform.times(predictedState));  // y =  z - H*x-
+    residualCovariance = measurementTransform.times(predictedCovariance).times(measurementTransform.transpose()).plus(measurementCovariance);  // S = H*P-*H^T + R
+    K = predictedCovariance.times(measurementTransform.transpose()).times(residualCovariance.inverse());  // K = P-*H^T*S^-1
+    
+    state = predictedState.plus(K.times(residual));  // x = x- + K*y
+    covariance = Matrix.identity(m, m).minus(K.times(measurementTransform)).times(predictedCovariance);
+  }
+  
+  public double[] getState() {
+    double[] out = new double[m];
+    for(int i=0; i<m; i++) {
+      out[i] = state.get(i,0);  
+    }
+    return out;
+  }  
+  public double[] getPredictedState() {
+    double[] out = new double[m];
+    for(int i=0; i<m; i++) {
+      out[i] = predictedState.get(i,0);  
+    }
+    return out;
+  }
+}
 public float frameRateFactor() {
   return BASE_FRAMERATE / frameRate;  
 }
@@ -3125,6 +3298,8 @@ public void sunMenu() {
 }
 
 public void configMenu() {
+  viewMode = DRIVE_VIEW;
+  
   GUI.clearElements();
   Button calibrateButton = new Button(new XY(width/2, 150), 300, 50, "CALIBRATE", new Action() { public void act(float x, float y) { house.calibrate = true; calibrateMenu(ALL_ACTS); } } ); 
   Button moveLegButton = new Button(new XY(width/2, 200), 300, 50, "MOVE LEG", new Action() { public void act(float x, float y) { house.calibrate = true; calibrateMenu(SINGLE_LEG); } } ); 
@@ -3135,6 +3310,7 @@ public void configMenu() {
   GUI.clickables.add(calibrateButton);
   GUI.clickables.add(moveLegButton);
   GUI.clickables.add(stepheightButton);
+  GUI.clickables.add(exitButton);
   
   GUI.clickables.add(exitButton);
   
@@ -3142,20 +3318,35 @@ public void configMenu() {
 }
 
 public void stepHeightMenu() {
+    viewMode = STEP_HEIGHT_VIEW;
     GUI.clearElements();
-    Button bigButton = new Button(new XY(width/2 , 80), 230, 40, "BIGGER", new Action() { public void act(float x, float y) { house.footUpLevel -= 1; } }); 
-    Button smallButton = new Button(new XY(width/2, 120), 230, 40, "SMALLER", new Action() { public void act(float x, float y) { house.footUpLevel += 1; } });  
-     
-    Button highButton = new Button(new XY(width/2 , 180), 230, 40, "HIGHER", new Action() { public void act(float x, float y) { house.footUpLevel += .5f; house.footDownLevel += .5f;} }); 
-    Button lowButton = new Button(new XY(width/2, 220), 230, 40, "LOWER", new Action() { public void act(float x, float y) { house.footUpLevel -= .5f; house.footDownLevel -= .5f; } });  
+
+    Button biggerButton = new Button(new XY((width-80)/4 + 135 , 50), "icons/zoomin.svg", new Action() { public void act(float x, float y) { house.footUpLevel -= 2; } }); 
+    Button smallerButton = new Button(new XY((width-80)/4 -135, 50), "icons/zoomout.svg", new Action() { public void act(float x, float y) { house.footUpLevel += 2; } }); 
     
-    Button resetButton = new Button(new XY(width/2, 280), 230, 40, "RESET", new Action() { public void act(float x, float y) { house.footUpLevel = 35; house.footDownLevel = 55; } });  
+    Button higherButton = new Button(new XY(3*(width-80)/4 + 135, 50), "icons/up.svg", new Action() { public void act(float x, float y) { house.footUpLevel += 2; house.footDownLevel += 2;} }); 
+    Button lowerButton = new Button(new XY(3*(width-80)/4 - 135, 50), "icons/down.svg", new Action() { public void act(float x, float y) { house.footUpLevel -= 2; house.footDownLevel -= 2; } }); 
+
+    Button smallButton = new Button(new XY((width-80)/4, 30), 230, 40, "SMALL", new Action() { public void act(float x, float y) { house.footUpLevel = 45; house.footDownLevel = 57; } });  
+    Button bigButton = new Button(new XY((width-80)/4, 70), 230, 40, "BIG", new Action() { public void act(float x, float y) { house.footUpLevel = 37; house.footDownLevel = 57; } });  
+    Button highButton = new Button(new XY(3*(width-80)/4, 30), 230, 40, "HIGH", new Action() { public void act(float x, float y) { house.footUpLevel = 42; house.footDownLevel = 61.5f; } });  
+    Button lowButton = new Button(new XY(3*(width-80)/4, 70), 230, 40, "LOW", new Action() { public void act(float x, float y) { house.footUpLevel = 27; house.footDownLevel = 40; } });  
+    
+    
+    // Optimal walking:  57-45
+    // Big steps:        57-37
+    // High clearance:   62-42
+    // Low clearance:    40-26     
+    GUI.clickables.add(biggerButton);
+    GUI.clickables.add(smallerButton);
+    GUI.clickables.add(higherButton);
+    GUI.clickables.add(lowerButton);
      
     GUI.clickables.add(bigButton);
     GUI.clickables.add(smallButton);
     GUI.clickables.add(highButton);
     GUI.clickables.add(lowButton);
-    GUI.clickables.add(resetButton);
+    //GUI.clickables.add(resetButton);
   
     addModeIcons();
 }
@@ -3176,6 +3367,8 @@ public void calibrateMenu(int mode) {
   house.gaitState = 0;       
   
   if(calibrateMode == SINGLE_ACT || calibrateMode == SINGLE_LEG) {
+     follow = true;
+     zoom = 1;
      Button oneButton  = new Button(new XY(width/2-125, height-25), 50, 50, "1", new Action() { public void act(float x, float y) { setConfigLeg(0,0); calibrateMenu(); } } ); 
      Button twoButton   = new Button(new XY(width/2-75, height-25), 50, 50, "2", new Action() { public void act(float x, float y) { setConfigLeg(0,1); calibrateMenu(); } } ); 
      Button threeButton   = new Button(new XY(width/2-25, height-25), 50, 50, "3", new Action() { public void act(float x, float y) { setConfigLeg(1,0); calibrateMenu(); } } ); 
@@ -3214,6 +3407,7 @@ public void calibrateMenu(int mode) {
          GUI.clickables.add(topZeroButton);
        }
        if(mode == SINGLE_LEG) {
+         viewMode = MOVE_LEG_VIEW;
 
          Button upButton = new Button(new XY(width/2 , 80), 130, 40, "UP", new Action() { public void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, -2), true); } }); 
          Button downButton = new Button(new XY(width/2, 120), 130, 40, "DWN", new Action() { public void act(float x, float y) { house.modules[configLegi].legs[configLegj].moveTarget(new XYZ(0, 0, 2), true); } }); 
@@ -3353,17 +3547,17 @@ public void addMapNavIcons() {
   GUI.clickables.add(rotateCCWButton);
 
 }
-public void updatePositions() {
-  for(int i=0; i<3; i++) {
-    String out = "";
-    for(int j=0; j<6; j++) {
-      out = out + "G" + j + "*";
-    }
-    try {
-      controllers[i].write(out);
-    }
-    catch (Exception e) { };
-  }  
+  public void updatePositions() {
+    for(int i=0; i<3; i++) {
+      String out = "";
+      for(int j=0; j<6; j++) {
+        out = out + "G" + j + "*";
+      }
+      try {
+        controllers[i].write(out);
+      }
+      catch (Exception e) { };
+    }  
 }
 
 public void serialEvent(Serial p) {
@@ -3426,6 +3620,6 @@ public boolean setPosition(int controller, int actuator, int value) {
 }
 
   static public void main(String args[]) {
-    PApplet.main(new String[] { "--bgcolor=#ece9d8", "WALKINGHOUSE" });
+    PApplet.main(new String[] { "--bgcolor=#FFFFFF", "WALKINGHOUSE" });
   }
 }

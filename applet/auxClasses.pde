@@ -247,3 +247,84 @@ public class SunAngle {
   }  
 }
 
+class Kalman
+{
+  private Matrix K;                    // K, the Kalman gain
+  
+  public Matrix state;                 // x
+  public Matrix covariance;            // P
+  
+  private Matrix predictedState;          // x-
+  private Matrix predictedCovariance;     // P-
+  private Matrix residual;              // y = z - H(x-)
+  private Matrix residualCovariance;   // S
+  
+  public Matrix controlModel;          // B
+  public Matrix controlInput;          // u
+  public Matrix processCovariance;     // Q
+  public Matrix dynamicsModel;         // F
+
+  public Matrix measurement;           // z  
+  public Matrix measurementCovariance; // R
+  public Matrix measurementTransform;  // H, relates state to measurement
+  
+  private int m;                       // Dimension of state vector
+  
+  Kalman(Matrix initialState, Matrix initialCovariance, Matrix dynamicsModel, Matrix controlModel, Matrix measurementTransform) {
+    this.state = initialState;
+    this.covariance = initialCovariance;
+    this.dynamicsModel = dynamicsModel;
+    this.controlModel = controlModel;
+    this.measurementTransform = measurementTransform;
+    // TODO: Make sure the dimensions are compatible amongst these matrices
+    
+    // Initialize things that will get set internally or later
+    this.predictedState = (Matrix)this.state.clone();
+    this.predictedCovariance = (Matrix)this.covariance.clone();    
+    
+    this.m = this.state.getRowDimension();
+    this.residual = new Matrix(m, 1);
+    this.residualCovariance = new Matrix(m, m);
+    
+    this.controlInput = new Matrix(m, 1);
+    this.processCovariance = new Matrix(m, m);
+    
+    this.measurement = new Matrix(m, 1);
+    this.measurementCovariance = new Matrix(m, m);  
+  }
+  
+  void step(Matrix lastControlInput, Matrix newMeasurement) {
+    this.step(lastControlInput, this.processCovariance, newMeasurement, this.measurementCovariance);  
+  }
+  
+  void step(Matrix lastControlInput, Matrix newProcessCovariance, Matrix newMeasurement, Matrix newMeasurementCovariance) {
+    this.measurementCovariance = newMeasurementCovariance;
+    this.processCovariance = newProcessCovariance;
+    // "PREDICT" phase
+    predictedState = dynamicsModel.times(state).plus(controlModel.times(lastControlInput));  // x- = A*x + B*u
+    predictedCovariance = dynamicsModel.times(covariance).times(dynamicsModel.transpose()).plus(processCovariance);  // P- = A*P*A^T + Q
+    
+    // "CORRECT" phase
+    residual = newMeasurement.minus(measurementTransform.times(predictedState));  // y =  z - H*x-
+    residualCovariance = measurementTransform.times(predictedCovariance).times(measurementTransform.transpose()).plus(measurementCovariance);  // S = H*P-*H^T + R
+    K = predictedCovariance.times(measurementTransform.transpose()).times(residualCovariance.inverse());  // K = P-*H^T*S^-1
+    
+    state = predictedState.plus(K.times(residual));  // x = x- + K*y
+    covariance = Matrix.identity(m, m).minus(K.times(measurementTransform)).times(predictedCovariance);
+  }
+  
+  double[] getState() {
+    double[] out = new double[m];
+    for(int i=0; i<m; i++) {
+      out[i] = state.get(i,0);  
+    }
+    return out;
+  }  
+  double[] getPredictedState() {
+    double[] out = new double[m];
+    for(int i=0; i<m; i++) {
+      out[i] = predictedState.get(i,0);  
+    }
+    return out;
+  }
+}

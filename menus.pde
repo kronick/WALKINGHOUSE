@@ -96,15 +96,17 @@ void configMenu() {
   viewMode = DRIVE_VIEW;
   
   GUI.clearElements();
-  Button calibrateButton = new Button(new XY(width/2, 150), 300, 50, "CALIBRATE", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(ALL_ACTS); } } ); 
-  Button moveLegButton = new Button(new XY(width/2, 200), 300, 50, "MOVE LEG", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(SINGLE_LEG); } } ); 
-  Button stepheightButton = new Button(new XY(width/2, 250), 300, 50, "STEP HEIGHT", new Action() { void act(float x, float y) { stepHeightMenu(); } } );
+  Button calibrateButton = new Button(new XY(width/2, 250), 300, 50, "CALIBRATE", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(ALL_ACTS); } } ); 
+  Button moveLegButton = new Button(new XY(width/2, 300), 300, 50, "MOVE LEG", new Action() { void act(float x, float y) { house.calibrate = true; calibrateMenu(SINGLE_LEG); } } ); 
+  Button stepheightButton = new Button(new XY(width/2, 150), 300, 50, "STEP HEIGHT", new Action() { void act(float x, float y) { stepHeightMenu(); } } );
+  Button gaitButton = new Button(new XY(width/2, 100), 300, 50, "GAIT", new Action() { void act(float x, float y) { gaitMenu(); } } );
  
-  Button exitButton = new Button(new XY(width/2, 350), 300, 50, "EXIT", new Action() { void act(float x, float y) { exit(); } } ); 
+  Button exitButton = new Button(new XY(width/2, 400), 300, 50, "EXIT", new Action() { void act(float x, float y) { exit(); } } ); 
   
   GUI.clickables.add(calibrateButton);
   GUI.clickables.add(moveLegButton);
   GUI.clickables.add(stepheightButton);
+  GUI.clickables.add(gaitButton);
   GUI.clickables.add(exitButton);
   
   GUI.clickables.add(exitButton);
@@ -112,6 +114,19 @@ void configMenu() {
   addModeIcons();
 }
 
+
+void gaitMenu() {
+    GUI.clearElements();
+    Button tripodButton = new Button(new XY(width/2, 150), 300, 50, "TRIPOD", new Action() { void act(float x, float y) { house.gait = house.TRIPOD_GAIT; house.gaitState = 0; } } ); 
+    Button waveButton = new Button(new XY(width/2, 200), 300, 50, "WAVE", new Action() { void act(float x, float y) { house.gait = house.WAVE_GAIT; house.gaitState = 0; } } ); 
+    Button backButton = new Button(new XY(100, 50), 200, 50, "BACK", new Action() { void act(float x, float y) { configMenu(); } } ); 
+    
+    GUI.clickables.add(backButton);        
+    GUI.clickables.add(tripodButton);    
+    GUI.clickables.add(waveButton);
+
+    addModeIcons();    
+}
 void stepHeightMenu() {
     viewMode = STEP_HEIGHT_VIEW;
     GUI.clearElements();
