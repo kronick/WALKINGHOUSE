@@ -327,7 +327,8 @@ class House
                   nextUp = false;
                 }                  
               }              
-              if(modules[i].legs[j].foot.z >= footUpLevel) {                
+              //if(modules[i].legs[j].foot.z >= footUpLevel) {                
+              if(!(i == ii && j == jj)) {                
                 delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
                 
                 orig = new XYZ(modules[i].legs[j].target);
@@ -342,13 +343,16 @@ class House
                 delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
                 delta.scale(1. / (this.modules.length * 2 - 1));  // Slow down by the size of the house
                 
-                if(!modules[i].legs[j].possible(new XYZ(modules[i].legs[j].target.x + delta.x,modules[i].legs[j].target.y + delta.y, modules[i].legs[j].target.z + delta.z)) ||
-                   !modules[i].legs[j].possible(new XYZ(modules[i].legs[j].target.x + delta.x,modules[i].legs[j].target.y + delta.y, footUpLevel)) ||
-                   !modules[i].legs[j].possible(new XYZ(modules[i].legs[j].target.x + delta.x,modules[i].legs[j].target.y + delta.y, footDownLevel)))
+                if(!modules[i].legs[j].canMoveTarget(delta)) {
                   legOnGroundStop = true;
+                }
+                else {
+                  //println(i + ", " + j + " can move, right?");
+                }
               }
             }     
           }
+
           if(!legOnGroundStop) {  // Move legs that are on (or lifting from) the ground backwards
             //println("moving backwards" + frameCount);
             for(int i=0; i<this.modules.length; i++) {
@@ -369,7 +373,9 @@ class House
                   delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
                   delta.scale(1. / (this.modules.length * 2 - 1));  // Slow down by the size of the house
                   
-                  modules[i].legs[j].moveTarget(delta);  // Whether or not this was possible should have been checked in the previous step
+                  if(!modules[i].legs[j].moveTarget(delta)){  // Whether or not this was possible should have been checked in the previous step
+                    println("Yikes! The feet shouldn't be moving!");
+                  }
                   
                   // Move the rotational center by the linear vector
                   factor = delta.length()/factor;  // Figure out how much the linear and rotational vectors were reduced by
@@ -794,6 +800,21 @@ public class Leg {
         }
         else return false;
       }
+
+      boolean canMoveTarget(XYZ e) {
+        // Transform to local coordinate system
+        e.rotate(this.rot);
+    
+        XYZ t = new XYZ(this.target.x + e.x, this.target.y + e.y, this.target.z + e.z);
+        
+        if(possible(new XYZ(t.x, t.y, t.z)) && 
+           possible(new XYZ(t.x, t.y, footUpLevel-1)) &&
+           possible(new XYZ(t.x, t.y, footDownLevel+1))) { // Make sure we can move up or down from the new position
+          return true;
+        }
+        else return false;
+      }
+      
       
       XYZ findFoot(float front, float back, float vert) {
         XYZ vertex = this.findVertex(front, back); 
