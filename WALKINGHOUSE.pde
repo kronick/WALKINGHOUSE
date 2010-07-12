@@ -83,7 +83,7 @@ void setup() {
   grey = color(0,0,100);
   black = color(0,0,0);
   
-  boolean simulate = false;
+  boolean simulate = true;
   
   // Initialize serial communications
   // Change the indices if controllers are attached to other ports

@@ -394,8 +394,28 @@ class House
             }            
           }
 
+
+          // Find out if the current leg can move forward or not
+          delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
+          
+          orig = new XYZ(modules[ii].legs[jj].target);
+          orig.rotate(modules[ii].legs[jj].rot);
+          orig.translate(modules[ii].legs[jj].toCenter); // Vector from center of house to the test point
+          angular = new XYZ(orig);
+          angular.rotate(stepRotation * ANGULAR_EPSILON);    // Rotate that vector
+          angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
+          
+          delta.translate(angular);              
+          float factor = delta.length();
+          delta.scale(-HORIZONTAL_EPSILON);
+          delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
+          
+          if(!modules[ii].legs[jj].canMoveTarget(delta)) {
+            currentForward = true;  
+          }
+
           // Try to move current leg forward if it's up          
-          if(modules[ii].legs[jj].foot.z > footUpLevel) {  // Up is in the -z direction
+          if(modules[ii].legs[jj].foot.z > footUpLevel && !currentForward) {  // Up is in the -z direction
               if(modules[ii].legs[jj].target.z >= footUpLevel-3) {
                 XYZ move = new XYZ(0,0,-VERTICAL_EPSILON);
                 move.scale(frameRateFactor());
@@ -404,7 +424,7 @@ class House
                 }
               }
           }
-          else {  
+          else if(!currentForward) {  
             delta = new XYZ(this.stepVector.x, this.stepVector.y, this.stepVector.z);
             
             orig = new XYZ(modules[ii].legs[jj].target);
@@ -415,7 +435,7 @@ class House
             angular.subtract(orig);      // Then subtract it to find the difference and direction of the rotational component              
             
             delta.translate(angular);              
-            float factor = delta.length();
+            factor = delta.length();
             delta.scale(-HORIZONTAL_EPSILON);
             delta.scale(frameRateFactor());  // Slow down or speed up movement per frame based on framerate to be framerate-independent.
             
@@ -423,18 +443,30 @@ class House
               currentForward = true;  
             }
           }
+          else {
+            modules[ii].legs[jj].setTarget(new XYZ(modules[ii].legs[jj].target.x,modules[ii].legs[jj].target.y,footDownLevel+1), true);
+          }
           // If current gaitState leg is forward and next gaitState leg is up, move to the next phase
           if(nextUp && currentForward) {
             // Set target for current leg to go on ground
             modules[ii].legs[jj].setTarget(new XYZ(modules[ii].legs[jj].target.x,modules[ii].legs[jj].target.y,footDownLevel+1), true);
-            
+            //143625143625143625
+            //145236134236
             switch(gaitState) {
+              case 1: gaitState = 4; break;
+              case 4: gaitState = 5; break;
+              case 5: gaitState = 2; break;
+              case 2: gaitState = 3; break;
+              case 3: gaitState = 6; break;
+              case 6: gaitState = 1;              
+              /*
               case 1: gaitState = 4; break;
               case 4: gaitState = 3; break;
               case 3: gaitState = 6; break;
               case 6: gaitState = 2; break;
               case 2: gaitState = 5; break;
               case 5: gaitState = 1;
+              */
                       breadcrumbs.add(new XYZ(this.center.x, this.center.y, this.center.z));
                       break;
               //143625
