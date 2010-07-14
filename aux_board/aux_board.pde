@@ -34,8 +34,8 @@ const static int COMPASS_ADDRESS = 0x32 >> 1;
 
 // Current sensor
 // ============================
-#define CURRENT_IN 15;
-static float ZERO_CURRENT = 2.22;
+static int CURRENT_IN = 1;
+static float ZERO_CURRENT = 7.3;
 static float NOMINAL_CURRENT = 50;
 static float CURRENT_COEFFICIENT = .625;
 
@@ -97,31 +97,33 @@ void loop() {
     if(i==5) roll += Wire.receive();
     i++;
   }
+  
   Serial.print("*H");
   Serial.print(heading, DEC);
-  Serial.print('!*X');
+  Serial.print("!*X");
   Serial.print(pitch, DEC);
-  Serial.print('!*Y');
+  Serial.print("!*Y");
   Serial.print(roll, DEC);
   Serial.print("!");
   
   // Now calculate current by averaging over 100 readings
   float i_avg = 0;
-  for(int j = 0; j < 100; j++) {
+  for(int j = 0; j < 50; j++) {
     i_avg += analogToCurrent(analogRead(CURRENT_IN));
+    delay(1);
   }
-  i_avg /= 100;
+  i_avg /= 50;
   Serial.print("*C");
   Serial.print(i_avg);
   Serial.print("!");
-  delay(100);
+  //sdelay(100);
   
 }
 
 float analogToCurrent(int a) {
   // First convert reading to voltage, subtracting out zeroCurrent offset
   float v = (a-ZERO_CURRENT) * 5 / 1024.;
-  float i = v * NOMINAL_CURRENT / CURRENT_COEFFICIENT;
+  float i = (v-2.5) * NOMINAL_CURRENT / CURRENT_COEFFICIENT;
   return i;
   //v = VREF ±(0.625·I_P/I_PN)  
 }
