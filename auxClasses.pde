@@ -1,3 +1,16 @@
+class SensorInfo {
+  public float current;
+  public float tiltX, tiltY;
+  public float heading;  
+  
+  SensorInfo(float current, float tiltX, float tiltY, float heading) {
+    this.current = current;
+    this.tiltX = tiltX;
+    this.tiltY = tiltY;
+    this.heading = heading;
+  }
+}
+
 class PID {
   public float pK, iK, dK; // Gains
   public float pTerm, iTerm, dTerm; // Terms

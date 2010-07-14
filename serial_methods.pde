@@ -41,9 +41,33 @@ void serialEvent(Serial p) {
     }
   }
   else {
+    char command;
+    float value;
+    String inString = auxBoard.readString();
+    String[] t = split(inString, "*");
+    if(t.length > 1) inString = t[1]; else inString = "!!!";
+    command = inString.charAt(0);
+    value = Float.parseFloat(inString.substring(1, inString.length()-1));
+    switch(command) {
+      case 'H':
+        info.heading = value;
+        break;
+      case 'X':
+        info.tiltX = value;
+        break;
+      case 'Y':
+        info.tiltY = value;
+        break;
+      case 'C':
+        info.current = value;
+        break;
+      default: break;
+    }
+    /*
     arrayCopy(powerHistory, 1, powerHistory, 0, powerHistory.length - 1);
     String inString = auxBoard.readString();
     powerHistory[powerHistory.length-1] = Float.parseFloat(inString.substring(0, inString.length()-1));  
+    */
   }
 }
 

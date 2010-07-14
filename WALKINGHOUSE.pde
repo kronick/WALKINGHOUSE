@@ -29,6 +29,8 @@ color red, white, grey, black, blue, green;
 
 House house;
 
+SensorInfo info = new SensorInfo(0,0,0,0);
+
 ArrayList colony;
 
 GUIManager GUI;
@@ -83,7 +85,7 @@ void setup() {
   grey = color(0,0,100);
   black = color(0,0,0);
   
-  boolean simulate = true;
+  boolean simulate = false;
   
   // Initialize serial communications
   // Change the indices if controllers are attached to other ports
@@ -94,13 +96,13 @@ void setup() {
       controllers[2] = new Serial(this, Serial.list()[4], 9600);
     }
     
-    //auxBoard = new Serial(this, Serial.list()[2], 9600);
+    auxBoard = new Serial(this, Serial.list()[2], 9600);
   
     controllers[0].bufferUntil('!');
     controllers[1].bufferUntil('!');
     controllers[2].bufferUntil('!');
 
-    //auxBoard.bufferUntil('!');
+    auxBoard.bufferUntil('!');
   }
   catch (Exception e) {
     println("Could not initialize serial ports! Running in simulation mode... ");
@@ -470,6 +472,9 @@ void draw() {
   text("T+"+nf(int(elapsed/3600000.), 2) + ":" + nf(int(elapsed/60000.)%60, 2) + "." + nf(int(elapsed/1000.)%60, 2), width-90, height-30);
   text(hour() + ":" + (new DecimalFormat("00")).format(minute()) + "." + (new DecimalFormat("00")).format(second()), width-90, height-20);
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
+  
+  textAlign(CENTER,CENTER);
+  text(info.current, width/2, height-10);
 
   // Draw the GUI
   GUI.draw(); 
