@@ -1,13 +1,42 @@
 class SensorInfo {
-  public float current;
+  public float current, avgCurrent;
+  public int currentSamples;
+  public float[] currentHistory = new float[1000];
+  
   public float tiltX, tiltY;
   public float heading;  
+  
   
   SensorInfo(float current, float tiltX, float tiltY, float heading) {
     this.current = current;
     this.tiltX = tiltX;
     this.tiltY = tiltY;
     this.heading = heading;
+  }
+  
+  void setCurrent(float c) {
+    current = c;
+    currentSamples++;
+    avgCurrent = (currentSamples-1.)/(currentSamples) * avgCurrent + 1./currentSamples * current;
+    println(avgCurrent);
+    
+    arrayCopy(currentHistory, 1, currentHistory, 0, currentHistory.length - 1);
+    currentHistory[currentHistory.length-1] = current;  
+    
+  }
+  void setTiltX(float c) {
+    tiltX = c;
+  }
+  void setTiltY(float c) {
+    tiltY = c;
+  }
+  void setHeading(float c) {
+    heading = c;
+  }  
+  
+  void resetAvgCurrent() {
+    avgCurrent = 0;
+    currentSamples = 0;  
   }
 }
 

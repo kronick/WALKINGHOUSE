@@ -50,24 +50,19 @@ void serialEvent(Serial p) {
     value = Float.parseFloat(inString.substring(1, inString.length()-1));
     switch(command) {
       case 'H':
-        info.heading = value;
+        info.setHeading(value);
         break;
       case 'X':
-        info.tiltX = value;
+        info.setTiltX(value);
         break;
       case 'Y':
-        info.tiltY = value;
+        info.setTiltY(value);
         break;
       case 'C':
-        info.current = value;
+        info.setCurrent(value);
         break;
       default: break;
     }
-    /*
-    arrayCopy(powerHistory, 1, powerHistory, 0, powerHistory.length - 1);
-    String inString = auxBoard.readString();
-    powerHistory[powerHistory.length-1] = Float.parseFloat(inString.substring(0, inString.length()-1));  
-    */
   }
 }
 

@@ -474,7 +474,8 @@ void draw() {
   text((new DecimalFormat("00.0")).format(frameRate) + "fps", width-90, height-10);
   
   textAlign(CENTER,CENTER);
-  text(info.current, width/2, height-10);
+  text(int(info.current) + "A", width/2, height-20);
+  text(int(info.avgCurrent) + "A average", width/2, height-10);
 
   // Draw the GUI
   GUI.draw(); 
@@ -568,13 +569,51 @@ void draw() {
   }
   
   if(viewMode == STATS_VIEW) {
-    stroke(white);
-    strokeWeight(3);
-    beginShape();
-    for(int i=0; i<powerHistory.length; i++) {
-      vertex(i/powerHistory.length * width*.8, height-100-powerHistory[i]*height/100.);
-    }  
-    endShape();
+    float xScale = 1;
+    float yScale = 6;
+    float graphWidth = width-80;
+    
+    if(house.simulate) info.setCurrent(sq(5*sin(radians(frameCount))));
+    
+    float recentAvg = 0;
+    pushMatrix();
+      translate(0,height-40);
+      scale(1, -1);
+
+      // Draw grid
+      noFill();
+      strokeWeight(1);
+      for(int i=0; i<13; i++) {
+        stroke(0,0,255,60*((i+1)%2 + 1));
+        line(0, i * 5 * yScale, graphWidth, i * 5 * yScale);
+      }   
+      for(int i=0; i<20; i++) {
+        stroke(0,0,255,60*((i+1)%2 + 1));
+        line(graphWidth/20. * (i+1), 0, graphWidth/20. * (i+1), 13 * 5 * yScale);
+      }                  
+      
+      // Draw points
+      stroke(white);
+      fill(blue);
+      strokeWeight(3);
+      beginShape();
+        for(int i=0; i<info.currentHistory.length; i++) {
+          vertex(float(i)/info.currentHistory.length * graphWidth, info.currentHistory[i]*yScale);
+          recentAvg += info.currentHistory[i];
+        }  
+        vertex(graphWidth,0);
+        vertex(0,0);
+      endShape();
+      
+      // Draw average lines
+      recentAvg /= info.currentHistory.length;
+      noFill();
+      stroke(0,0,255,100);
+      line(0,info.avgCurrent*yScale, graphWidth,info.avgCurrent*yScale);
+      stroke(red);
+      line(0,recentAvg*yScale, graphWidth,recentAvg*yScale);   
+ 
+    popMatrix();
   }
 }
 

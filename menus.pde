@@ -315,6 +315,11 @@ void calibrateMenu(int mode) {
 void statsMenu() {
   viewMode = STATS_VIEW;
   GUI.clearElements();
+  
+  Button resetButton = new Button(new XY(100, 25), 200, 50, "RESET", new Action() { void act(float x, float y) { info.resetAvgCurrent(); } });
+  
+  GUI.clickables.add(resetButton);
+  
   addModeIcons();
 }
 
