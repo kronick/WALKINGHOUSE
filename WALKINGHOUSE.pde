@@ -1,5 +1,6 @@
 import java.util.Calendar.*;
 import java.util.Date.*;
+import java.awt.event.*;
 
 //import Jama.util.*;
 //import Jama.*;
@@ -573,7 +574,7 @@ void draw() {
     float yScale = 6;
     float graphWidth = width-80;
     
-    if(house.simulate) info.setCurrent(sq(5*sin(radians(frameCount))));
+    if(house.simulate) info.setCurrent(sq(5*sin(radians(frameCount))) + random(0,frameCount%50));
     
     float recentAvg = 0;
     pushMatrix();
@@ -603,7 +604,7 @@ void draw() {
         }  
         vertex(graphWidth,0);
         vertex(0,0);
-      endShape();
+      endShape(); 
       
       // Draw average lines
       recentAvg /= info.currentHistory.length;

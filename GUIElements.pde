@@ -494,13 +494,13 @@ class Button implements Clickable {
 }
 
 
-interface Action {
+public interface Action {
   void act(float x, float y);
 }
-interface DialAction {
+public interface DialAction {
   void act(float r, float theta); // On a dial, these values will be scaled relative to the range of the dial
 }
-interface SliderAction {
+public interface SliderAction {
   void act(float value);          // This should be pre-scaled
 }
 
