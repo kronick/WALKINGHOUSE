@@ -59,7 +59,7 @@ PImage bgMap;
 boolean turbo = false;
 boolean follow = false;
 
-XMLElement config;
+//XMLElement config;
 
 Serial[] controllers = new Serial[3];
 Serial auxBoard;
@@ -75,9 +75,14 @@ void setup() {
   colorMode(HSB); 
 
   hint(ENABLE_NATIVE_FONTS); 
-  Courier = loadFont("Courier-Bold-11.vlw");
-  HelveticaBold = loadFont("Helvetica-Bold-40.vlw");
-  DialNumbers = loadFont("Courier-Bold-16.vlw"); 
+  //Courier = loadFont("Courier-Bold-11.vlw");
+  //HelveticaBold = loadFont("Helvetica-Bold-40.vlw");
+  //DialNumbers = loadFont("Courier-Bold-16.vlw"); 
+  
+  Courier = createFont("Courier-Bold", 11);
+  HelveticaBold = createFont("Helvetica-Bold", 40);
+  DialNumbers = createFont("Courier-Bold", 16); 
+
 
   red = color(0,170,255);
   blue = color(140,150,200);
@@ -97,13 +102,13 @@ void setup() {
       controllers[2] = new Serial(this, Serial.list()[4], 9600);
     }
     
-    auxBoard = new Serial(this, Serial.list()[2], 9600);
+    //auxBoard = new Serial(this, Serial.list()[2], 9600);
   
     controllers[0].bufferUntil('!');
     controllers[1].bufferUntil('!');
     controllers[2].bufferUntil('!');
 
-    auxBoard.bufferUntil('!');
+    //auxBoard.bufferUntil('!');
   }
   catch (Exception e) {
     println("Could not initialize serial ports! Running in simulation mode... ");

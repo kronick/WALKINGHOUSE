@@ -41,6 +41,8 @@ void serialEvent(Serial p) {
     }
   }
   else {
+    return; // AUX BOARD OUT OF THE LOOP
+    /*
     char command;
     float value;
     String inString = auxBoard.readString();
@@ -63,6 +65,7 @@ void serialEvent(Serial p) {
         break;
       default: break;
     }
+    */
   }
 }
 
